@@ -2,58 +2,60 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  onSnapshot,
+  collection,
+  query,
+  where,
+} from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getFirestore, doc, setDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
-import { app } from '@/lib/firebase';
+
 import { useToast } from '@/hooks/use-toast';
 import { Barber, TimeSlot, BarberSchedule, Booking } from '@/lib/types';
 import { Barbers, generateTimeSlots } from '@/lib/data';
-import { AuthProvider, useAuth } from '@/components/auth-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Search, Moon, Sun } from 'lucide-react';
+import { Users, Briefcase, Search, Moon, Sun, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useTheme } from 'next-themes';
+import { useUser } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
-
-const db = getFirestore(app);
-
-function Header({ role, setRole }: { role: 'client' | 'barber', setRole: (role: 'client' | 'barber') => void }) {
+function Header() {
   const { theme, setTheme } = useTheme();
+  const { user, userProfile, auth } = useUser();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    await signOut(auth);
+    router.push('/login');
+  };
 
   return (
     <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
       <div className="container mx-auto flex h-14 items-center justify-between px-4 md:px-6">
         <h1 className="text-xl font-bold tracking-tight">Clipper Scheduler</h1>
         <div className="flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                {role === 'client' ? <Users /> : <Briefcase />}
-                <span>{role === 'client' ? 'Client View' : 'Barber View'}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-              <DropdownMenuRadioGroup value={role} onValueChange={(value) => setRole(value as 'client' | 'barber')}>
-                <DropdownMenuRadioItem value="client">
-                  <Users className="mr-2 h-4 w-4" />
-                  <span>Client View</span>
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="barber">
-                  <Briefcase className="mr-2 h-4 w-4" />
-                  <span>Barber View</span>
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <Button
             variant="outline"
             size="icon"
@@ -63,46 +65,73 @@ function Header({ role, setRole }: { role: 'client' | 'barber', setRole: (role: 
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage
+                      src={user.photoURL ?? ''}
+                      alt={user.displayName ?? 'User'}
+                    />
+                    <AvatarFallback>
+                      {user.displayName?.charAt(0) ?? user.email?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </header>
   );
 }
 
-
 function ClientView() {
   const { toast } = useToast();
   const [barbers] = useState<Barber[]>(Barbers);
   const [schedules, setSchedules] = useState<BarberSchedule[]>([]);
-  const { user } = useAuth();
+  const { user, db } = useUser();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const today = new Date();
   const todayDateString = today.toISOString().split('T')[0];
 
   useEffect(() => {
-    const bookingsQuery = query(collection(db, "bookings"), where("date", ">=", todayDateString));
+    if (!db) return;
+    const bookingsQuery = query(
+      collection(db, 'bookings'),
+      where('date', '>=', todayDateString)
+    );
     const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
-      const bookedSlots = querySnapshot.docs.map(doc => doc.data() as Booking);
+      const bookedSlots = querySnapshot.docs.map(
+        (doc) => doc.data() as Booking
+      );
       setBookings(bookedSlots);
     });
 
-    const barberSchedules: BarberSchedule[] = Barbers.map(barber => ({
+    const barberSchedules: BarberSchedule[] = Barbers.map((barber) => ({
       barberId: barber.id,
       availableSlots: generateTimeSlots(9, 17, 30),
     }));
 
     setSchedules(barberSchedules);
     return () => unsubscribe();
-  }, [todayDateString]);
-
+  }, [db, todayDateString]);
 
   const bookAppointment = async (
     barberId: string,
     slot: TimeSlot,
     date: Date
   ) => {
-    if (!user) {
+    if (!user || !db) {
       toast({
         variant: 'destructive',
         title: 'Authentication Required',
@@ -113,7 +142,8 @@ function ClientView() {
 
     const bookingDate = date.toISOString().split('T')[0];
     const isAlreadyBooked = bookings.some(
-      (b) => b.barberId === barberId && b.date === bookingDate && b.time === slot.time
+      (b) =>
+        b.barberId === barberId && b.date === bookingDate && b.time === slot.time
     );
 
     if (isAlreadyBooked) {
@@ -147,7 +177,6 @@ function ClientView() {
         title: 'Booking Confirmed!',
         description: `Your appointment is booked.`,
       });
-
     } catch (error) {
       console.error('Error booking appointment: ', error);
       toast({
@@ -161,7 +190,6 @@ function ClientView() {
   const filteredBarbers = barbers.filter((barber) =>
     barber.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
 
   return (
     <>
@@ -198,7 +226,10 @@ function ClientView() {
                 <div className="grid grid-cols-3 gap-2">
                   {barberSchedule?.availableSlots.map((slot) => {
                     const isBooked = bookings.some(
-                      b => b.barberId === barber.id && b.time === slot.time && b.date === todayDateString
+                      (b) =>
+                        b.barberId === barber.id &&
+                        b.time === slot.time &&
+                        b.date === todayDateString
                     );
 
                     return (
@@ -225,8 +256,10 @@ function ClientView() {
 function BarberView() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const { db } = useUser();
 
   useEffect(() => {
+    if (!db) return;
     const bookingsQuery = query(collection(db, 'bookings'));
     const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookingsData = querySnapshot.docs.map(
@@ -236,7 +269,7 @@ function BarberView() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [db]);
 
   const filteredBookings = bookings.filter((booking) =>
     booking.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -269,7 +302,7 @@ function BarberView() {
           <TableBody>
             {filteredBookings.length > 0 ? (
               filteredBookings.map((booking) => {
-                const barber = Barbers.find(b => b.id === booking.barberId);
+                const barber = Barbers.find((b) => b.id === booking.barberId);
                 return (
                   <TableRow key={booking.id}>
                     <TableCell>{booking.clientName}</TableCell>
@@ -277,7 +310,7 @@ function BarberView() {
                     <TableCell>{booking.date}</TableCell>
                     <TableCell>{booking.time}</TableCell>
                   </TableRow>
-                )
+                );
               })
             ) : (
               <TableRow>
@@ -294,23 +327,33 @@ function BarberView() {
 }
 
 function HomePage() {
-  const [role, setRole] = useState<'client' | 'barber'>('client');
+  const { user, userProfile, loading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !userProfile) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      <Header role={role} setRole={setRole} />
+      <Header />
       <main className="container mx-auto p-4 md:p-6">
-        {role === 'client' ? <ClientView /> : <BarberView />}
+        {userProfile.role === 'client' ? <ClientView /> : <BarberView />}
       </main>
     </div>
   );
 }
 
-
 export default function Home() {
-  return (
-    <AuthProvider>
-      <HomePage />
-    </AuthProvider>
-  )
+  return <HomePage />;
 }

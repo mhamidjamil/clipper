@@ -23,3 +23,12 @@ export interface Booking {
   date: string;
   time: string;
 }
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  role: 'client' | 'barber';
+  name?: string;
+}
+
+    
