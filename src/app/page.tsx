@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getFirestore, doc, setDoc, getDocs, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Barber, TimeSlot, BarberSchedule, Booking } from '@/lib/types';
@@ -18,14 +18,16 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Search } from 'lucide-react';
+import { Users, Briefcase, Search, Moon, Sun } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useTheme } from 'next-themes';
 
 
 const db = getFirestore(app);
 
 function Header({ role, setRole }: { role: 'client' | 'barber', setRole: (role: 'client' | 'barber') => void }) {
+  const { theme, setTheme } = useTheme();
 
   return (
     <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
@@ -52,6 +54,15 @@ function Header({ role, setRole }: { role: 'client' | 'barber', setRole: (role: 
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          >
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
         </div>
       </div>
     </header>
@@ -91,6 +102,15 @@ function ClientView() {
     slot: TimeSlot,
     date: Date
   ) => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Required',
+        description: 'You need to be logged in to book an appointment.',
+      });
+      return;
+    }
+
     const bookingDate = date.toISOString().split('T')[0];
     const isAlreadyBooked = bookings.some(
       (b) => b.barberId === barberId && b.date === bookingDate && b.time === slot.time
@@ -115,8 +135,8 @@ function ClientView() {
       const newBooking: Booking = {
         id: bookingId,
         barberId,
-        clientId: 'placeholder-client-id', // Using a placeholder
-        clientName: 'Placeholder Client', // Using a placeholder
+        clientId: user.uid,
+        clientName: user.displayName || 'Anonymous',
         date: bookingDate,
         time: slot.time,
       };
