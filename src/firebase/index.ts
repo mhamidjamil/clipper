@@ -46,6 +46,8 @@ export function useUser(): UseUserValue {
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      // If there's no user, we can stop loading.
+      // If there IS a user, we'll wait for the profile to load.
       if (!user) {
         setLoading(false);
       }
@@ -60,12 +62,17 @@ export function useUser(): UseUserValue {
       const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
         if (doc.exists()) {
           setUserProfile(doc.data());
+        } else {
+          // Handle case where user exists in Auth but not in Firestore.
+          setUserProfile(null);
         }
+        // Only stop loading after we've attempted to fetch the profile.
         setLoading(false);
       });
       return () => unsub();
     } else {
-      setLoading(false);
+      // This handles the case where the user is logged out.
+      // We already set loading to false in the auth listener.
       setUserProfile(null);
     }
   }, [user, firebaseContext]);
