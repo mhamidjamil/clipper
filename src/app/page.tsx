@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Barber, TimeSlot, BarberSchedule } from '@/lib/types';
 import { Barbers, generateTimeSlots } from '@/lib/data';
 import { AuthProvider, useAuth } from '@/components/auth-provider';
-import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 const db = getFirestore(app);
@@ -23,8 +23,10 @@ function Header() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error('Error signing in with Google: ', error);
+    } catch (error: any) {
+      if (error.code !== 'auth/cancelled-popup-request') {
+        console.error('Error signing in with Google: ', error);
+      }
     }
   };
 
