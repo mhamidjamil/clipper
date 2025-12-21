@@ -1,5 +1,5 @@
 
-import { Barber, BarberSchedule, TimeSlot } from './types';
+import { Barber, TimeSlot } from './types';
 
 export const Barbers: Barber[] = [
   {
@@ -25,7 +25,10 @@ export function generateTimeSlots(start: number, end: number): TimeSlot[] {
         for (let j = 0; j < 2; j++) {
             const hour = i.toString().padStart(2, '0');
             const minute = (j * 30).toString().padStart(2, '0');
-            slots.push({ time: `${hour}:${minute}`, isReserved: Math.random() > 0.8 });
+            // Make reservation random but consistent across renders
+            const seed = i + j;
+            const isReserved = (seed * 13) % 7 > 4
+            slots.push({ time: `${hour}:${minute}`, isReserved: isReserved });
         }
     }
     return slots;

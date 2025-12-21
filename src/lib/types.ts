@@ -18,7 +18,8 @@ export interface BarberSchedule {
 export interface Booking {
   id: string;
   barberId: string;
-  clientName: string;
+  clientId: string;
+  clientName: string | null;
   date: string;
   time: string;
 }
