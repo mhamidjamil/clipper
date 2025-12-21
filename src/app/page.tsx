@@ -11,12 +11,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Barber, TimeSlot, BarberSchedule } from '@/lib/types';
 import { Barbers, generateTimeSlots } from '@/lib/data';
 import { AuthProvider, useAuth } from '@/components/auth-provider';
-import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 const db = getFirestore(app);
 
 function Header() {
+  const { toast } = useToast();
   const { user } = useAuth();
 
   const handleLogin = async () => {
@@ -24,8 +25,23 @@ function Header() {
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      if (error.code !== 'auth/cancelled-popup-request') {
+      if (error.code === 'auth/cancelled-popup-request') {
+        // User cancelled the login, do nothing.
+        return;
+      } else if (error.code === 'auth/configuration-not-found') {
+        toast({
+            variant: 'destructive',
+            title: 'Action Required: Authorize Domain',
+            description: "Go to Firebase Console -> Authentication -> Settings -> Authorized Domains, and add 'cloudworkstations.dev'. Also ensure Google is an enabled Sign-in provider.",
+            duration: 15000,
+        });
+      } else {
         console.error('Error signing in with Google: ', error);
+         toast({
+            variant: 'destructive',
+            title: 'Login Error',
+            description: error.message,
+        });
       }
     }
   };
