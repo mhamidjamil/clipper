@@ -1,22 +1,40 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getFirestore, doc, setDoc, collection } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { Barber, TimeSlot } from '@/lib/types';
-import { Barbers, BarberSchedules } from '@/lib/data';
+import { Barber, TimeSlot, BarberSchedule } from '@/lib/types';
+import { Barbers, generateTimeSlots } from '@/lib/data';
 
 const db = getFirestore(app);
 
 export default function Home() {
   const { toast } = useToast();
   const [barbers] = useState<Barber[]>(Barbers);
-  const [schedules] = useState(BarberSchedules);
+  const [schedules, setSchedules] = useState<BarberSchedule[]>([]);
+
+  useEffect(() => {
+    const BarberSchedules: BarberSchedule[] = [
+      {
+        barberId: '1',
+        availableSlots: generateTimeSlots(9, 17),
+      },
+      {
+        barberId: '2',
+        availableSlots: generateTimeSlots(10, 18),
+      },
+      {
+        barberId: '3',
+        availableSlots: generateTimeSlots(9, 15),
+      },
+    ];
+    setSchedules(BarberSchedules);
+  }, []);
 
   const bookAppointment = async (
     barberId: string,
@@ -51,7 +69,19 @@ export default function Home() {
 
       // This would ideally re-fetch data from firestore
       // For now, we will just update the local state
-      slot.isReserved = true;
+      setSchedules(
+        schedules.map((schedule) => {
+          if (schedule.barberId === barberId) {
+            return {
+              ...schedule,
+              availableSlots: schedule.availableSlots.map((s) =>
+                s.time === slot.time ? { ...s, isReserved: true } : s
+              ),
+            };
+          }
+          return schedule;
+        })
+      );
     } catch (error) {
       console.error('Error booking appointment: ', error);
       toast({
@@ -121,4 +151,3 @@ export default function Home() {
     </div>
   );
 }
-

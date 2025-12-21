@@ -1,5 +1,5 @@
 
-import { Barber, BarberSchedule } from './types';
+import { Barber, BarberSchedule, TimeSlot } from './types';
 
 export const Barbers: Barber[] = [
   {
@@ -19,7 +19,7 @@ export const Barbers: Barber[] = [
   },
 ];
 
-function generateTimeSlots(start: number, end: number): { time: string; isReserved: boolean }[] {
+export function generateTimeSlots(start: number, end: number): TimeSlot[] {
     const slots = [];
     for (let i = start; i < end; i++) {
         for (let j = 0; j < 2; j++) {
@@ -30,18 +30,3 @@ function generateTimeSlots(start: number, end: number): { time: string; isReserv
     }
     return slots;
 }
-
-export const BarberSchedules: BarberSchedule[] = [
-  {
-    barberId: '1',
-    availableSlots: generateTimeSlots(9, 17),
-  },
-  {
-    barberId: '2',
-    availableSlots: generateTimeSlots(10, 18),
-  },
-  {
-    barberId: '3',
-    availableSlots: generateTimeSlots(9, 15),
-  },
-];
