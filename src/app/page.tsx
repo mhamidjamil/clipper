@@ -31,9 +31,9 @@ function Header() {
       } else if (error.code === 'auth/configuration-not-found') {
         toast({
             variant: 'destructive',
-            title: 'Action Required: Authorize Domain',
-            description: "Go to Firebase Console -> Authentication -> Settings -> Authorized Domains, and add 'cloudworkstations.dev'. Also ensure Google is an enabled Sign-in provider.",
-            duration: 15000,
+            title: 'Action Required: Authorize Your App\'s Domain',
+            description: "To fix login, go to the Firebase Console -> Authentication -> Settings -> Authorized Domains, and add 'cloudworkstations.dev'. Also ensure Google is an enabled Sign-in provider.",
+            duration: 20000,
         });
       } else {
         console.error('Error signing in with Google: ', error);
