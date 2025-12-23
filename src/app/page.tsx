@@ -60,10 +60,10 @@ function Header() {
           {userProfile?.role === 'barber' && (
             <Link href="/availability" passHref>
               <Button variant="outline" size="icon" asChild>
-                <a>
+                <span>
                   <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
                   <span className="sr-only">Manage Availability</span>
-                </a>
+                </span>
               </Button>
             </Link>
           )}
