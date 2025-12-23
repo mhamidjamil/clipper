@@ -56,8 +56,11 @@ export default function SignupPage() {
         email: user.email!,
         role,
         name,
-        mobileNumber: mobileNumber || undefined,
       };
+
+      if (mobileNumber) {
+        userProfile.mobileNumber = mobileNumber;
+      }
 
       await setDoc(doc(db, 'users', user.uid), userProfile);
 
