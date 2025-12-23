@@ -1,6 +1,4 @@
-
 'use client';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -20,46 +18,77 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { UserProfile } from '@/lib/types';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+
+const formSchema = z
+  .object({
+    name: z.string().min(1, 'Full name is required'),
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    role: z.enum(['client', 'barber']),
+    mobileNumber: z.string(),
+  })
+  .refine(
+    (data) => {
+      if (data.role === 'barber') {
+        return data.mobileNumber.length > 0;
+      }
+      return true;
+    },
+    {
+      message: 'Mobile number is required for barbers',
+      path: ['mobileNumber'],
+    }
+  );
+
+type SignupFormValues = z.infer<typeof formSchema>;
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [role, setRole] = useState<'client' | 'barber'>('client');
   const router = useRouter();
   const { toast } = useToast();
   const { auth, db } = useFirebase();
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      role: 'client',
+      mobileNumber: '',
+    },
+  });
 
-    if (role === 'barber' && !mobileNumber) {
-      toast({
-        variant: 'destructive',
-        title: 'Signup Failed',
-        description: 'Mobile number is required for barbers.',
-      });
-      return;
-    }
+  const role = form.watch('role');
 
+  const handleSignup = async (values: SignupFormValues) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
-        email,
-        password
+        values.email,
+        values.password
       );
       const user = userCredential.user;
 
       const userProfile: UserProfile = {
         uid: user.uid,
         email: user.email!,
-        role,
-        name,
+        role: values.role,
+        name: values.name,
       };
 
-      if (mobileNumber) {
-        userProfile.mobileNumber = mobileNumber;
+      if (values.mobileNumber) {
+        userProfile.mobileNumber = values.mobileNumber;
       }
 
       await setDoc(doc(db, 'users', user.uid), userProfile);
@@ -83,85 +112,111 @@ export default function SignupPage() {
             Create an account to start booking appointments.
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSignup}>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSignup)}>
+            <CardContent className="grid gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="m@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="mobileNumber">
-                Mobile Number {role === 'barber' && '(Required)'}
-              </Label>
-              <Input
-                id="mobileNumber"
-                type="tel"
-                placeholder="123-456-7890"
-                value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
-                required={role === 'barber'}
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+              <FormField
+                control={form.control}
+                name="mobileNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Mobile Number {role === 'barber' && '(Required)'}
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="123-456-7890" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label>Role</Label>
-              <RadioGroup
-                defaultValue="client"
-                className="flex gap-4"
-                onValueChange={(value: 'client' | 'barber') => setRole(value)}
-                value={role}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="client" id="client" />
-                  <Label htmlFor="client">Client</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="barber" id="barber" />
-                  <Label htmlFor="barber">Barber</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col">
-            <Button className="w-full" type="submit">
-              Create Account
-            </Button>
-            <div className="mt-4 text-center text-sm">
-              Already have an account?{' '}
-              <Link href="/login" className="underline">
-                Sign in
-              </Link>
-            </div>
-          </CardFooter>
-        </form>
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Role</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex gap-4"
+                      >
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="client" id="client" />
+                          </FormControl>
+                          <FormLabel htmlFor="client" className="font-normal">
+                            Client
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="barber" id="barber" />
+                          </FormControl>
+                          <FormLabel htmlFor="barber" className="font-normal">
+                            Barber
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex flex-col">
+              <Button className="w-full" type="submit">
+                Create Account
+              </Button>
+              <div className="mt-4 text-center text-sm">
+                Already have an account?{' '}
+                <Link href="/login" className="underline">
+                  Sign in
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Form>
       </Card>
     </div>
   );
