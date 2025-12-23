@@ -12,6 +12,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Search, Moon, Sun, LogOut } from 'lucide-react';
+import { CalendarDays, Search, Moon, Sun, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -56,6 +57,16 @@ function Header() {
       <div className="container mx-auto flex h-14 items-center justify-between px-4 md:px-6">
         <h1 className="text-xl font-bold tracking-tight">Clipper Scheduler</h1>
         <div className="flex items-center gap-4">
+          {userProfile?.role === 'barber' && (
+            <Link href="/availability" passHref>
+              <Button variant="outline" size="icon" asChild>
+                <a>
+                  <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
+                  <span className="sr-only">Manage Availability</span>
+                </a>
+              </Button>
+            </Link>
+          )}
           <Button
             variant="outline"
             size="icon"
