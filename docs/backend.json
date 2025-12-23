@@ -23,6 +23,10 @@
           "type": "string",
           "description": "The user's role in the application.",
           "enum": ["client", "barber"]
+        },
+        "mobileNumber": {
+            "type": "string",
+            "description": "The user's mobile phone number."
         }
       },
       "required": ["uid", "email", "role"]
@@ -40,5 +44,3 @@
     }
   }
 }
-
-    

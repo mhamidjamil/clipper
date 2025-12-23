@@ -25,6 +25,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [role, setRole] = useState<'client' | 'barber'>('client');
   const router = useRouter();
   const { toast } = useToast();
@@ -32,6 +33,16 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (role === 'barber' && !mobileNumber) {
+      toast({
+        variant: 'destructive',
+        title: 'Signup Failed',
+        description: 'Mobile number is required for barbers.',
+      });
+      return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -45,6 +56,7 @@ export default function SignupPage() {
         email: user.email!,
         role,
         name,
+        mobileNumber: mobileNumber || undefined,
       };
 
       await setDoc(doc(db, 'users', user.uid), userProfile);
@@ -93,6 +105,19 @@ export default function SignupPage() {
               />
             </div>
             <div className="grid gap-2">
+              <Label htmlFor="mobileNumber">
+                Mobile Number {role === 'barber' && '(Required)'}
+              </Label>
+              <Input
+                id="mobileNumber"
+                type="tel"
+                placeholder="123-456-7890"
+                value={mobileNumber}
+                onChange={(e) => setMobileNumber(e.target.value)}
+                required={role === 'barber'}
+              />
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -109,6 +134,7 @@ export default function SignupPage() {
                 defaultValue="client"
                 className="flex gap-4"
                 onValueChange={(value: 'client' | 'barber') => setRole(value)}
+                value={role}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="client" id="client" />
