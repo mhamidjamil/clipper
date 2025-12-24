@@ -65,6 +65,7 @@ function ClientView() {
   const [schedules, setSchedules] = useState<BarberSchedule[]>([]);
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const today = new Date();
   const todayDateString = today.toISOString().split('T')[0];
 
@@ -137,52 +138,67 @@ function ClientView() {
     }
   };
 
+  const filteredBarbers = barbers.filter((barber) =>
+    barber.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
 
   return (
-    <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-      {barbers.map((barber) => {
-        const barberSchedule = schedules.find(
-          (s) => s.barberId === barber.id
-        );
+    <>
+      <div className="mb-8 flex items-center gap-2">
+        <Search className="h-5 w-5 text-muted-foreground" />
+        <Input
+          placeholder="Search by barber name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        {filteredBarbers.map((barber) => {
+          const barberSchedule = schedules.find(
+            (s) => s.barberId === barber.id
+          );
 
-        return (
-          <Card key={barber.id}>
-            <CardHeader className="flex flex-row items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={barber.avatarUrl} alt={barber.name} />
-                <AvatarFallback>{barber.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle>{barber.name}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <h3 className="mb-4 text-lg font-semibold">
-                Available Slots for Today
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
-                {barberSchedule?.availableSlots.map((slot) => {
-                  const isBooked = bookings.some(
-                    b => b.barberId === barber.id && b.time === slot.time && b.date === todayDateString
-                  );
+          return (
+            <Card key={barber.id}>
+              <CardHeader className="flex flex-row items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={barber.avatarUrl} alt={barber.name} />
+                  <AvatarFallback>{barber.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle>{barber.name}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <h3 className="mb-4 text-lg font-semibold">
+                  Available Slots for Today
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {barberSchedule?.availableSlots.map((slot) => {
+                    const isBooked = bookings.some(
+                      b => b.barberId === barber.id && b.time === slot.time && b.date === todayDateString
+                    );
 
-                  return (
-                    <Button
-                      key={slot.time}
-                      variant={isBooked ? 'destructive' : 'outline'}
-                      disabled={isBooked}
-                      onClick={() => bookAppointment(barber.id, slot, today)}
-                    >
-                      {slot.time}
-                    </Button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+                    return (
+                      <Button
+                        key={slot.time}
+                        variant={isBooked ? 'destructive' : 'outline'}
+                        disabled={isBooked}
+                        onClick={() => bookAppointment(barber.id, slot, today)}
+                      >
+                        {slot.time}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
