@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getFirestore, doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDocs, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Barber, TimeSlot, BarberSchedule, Booking } from '@/lib/types';
@@ -18,7 +18,9 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase } from 'lucide-react';
+import { Users, Briefcase, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 const db = getFirestore(app);
@@ -67,14 +69,11 @@ function ClientView() {
   const todayDateString = today.toISOString().split('T')[0];
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      const bookingsQuery = query(collection(db, "bookings"), where("date", "==", todayDateString));
-      const querySnapshot = await getDocs(bookingsQuery);
+    const bookingsQuery = query(collection(db, "bookings"), where("date", ">=", todayDateString));
+    const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookedSlots = querySnapshot.docs.map(doc => doc.data() as Booking);
       setBookings(bookedSlots);
-    };
-
-    fetchBookings();
+    });
 
     const barberSchedules: BarberSchedule[] = Barbers.map(barber => ({
       barberId: barber.id,
@@ -82,6 +81,7 @@ function ClientView() {
     }));
 
     setSchedules(barberSchedules);
+    return () => unsubscribe();
   }, [todayDateString]);
 
 
@@ -90,15 +90,6 @@ function ClientView() {
     slot: TimeSlot,
     date: Date
   ) => {
-    // if (!user) {
-    //   toast({
-    //     variant: 'destructive',
-    //     title: 'Please log in',
-    //     description: 'You need to be logged in to book an appointment.',
-    //   });
-    //   return;
-    // }
-
     const bookingDate = date.toISOString().split('T')[0];
     const isAlreadyBooked = bookings.some(
       (b) => b.barberId === barberId && b.date === bookingDate && b.time === slot.time
@@ -130,8 +121,6 @@ function ClientView() {
       };
 
       await setDoc(bookingRef, newBooking);
-
-      setBookings([...bookings, newBooking]);
 
       toast({
         title: 'Booking Confirmed!',
@@ -198,13 +187,71 @@ function ClientView() {
 }
 
 function BarberView() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const bookingsQuery = query(collection(db, 'bookings'));
+    const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
+      const bookingsData = querySnapshot.docs.map(
+        (doc) => doc.data() as Booking
+      );
+      setBookings(bookingsData);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const filteredBookings = bookings.filter((booking) =>
+    booking.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Barber View</CardTitle>
+        <CardTitle>Client Bookings</CardTitle>
       </CardHeader>
       <CardContent>
-        <p>This is the placeholder for the barber's schedule and management view. We can build this out next.</p>
+        <div className="mb-4 flex items-center gap-2">
+          <Search className="h-5 w-5 text-muted-foreground" />
+          <Input
+            placeholder="Search by client name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Client Name</TableHead>
+              <TableHead>Barber</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Time</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredBookings.length > 0 ? (
+              filteredBookings.map((booking) => {
+                const barber = Barbers.find(b => b.id === booking.barberId);
+                return (
+                  <TableRow key={booking.id}>
+                    <TableCell>{booking.clientName}</TableCell>
+                    <TableCell>{barber ? barber.name : 'Unknown'}</TableCell>
+                    <TableCell>{booking.date}</TableCell>
+                    <TableCell>{booking.time}</TableCell>
+                  </TableRow>
+                )
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center">
+                  No bookings found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
