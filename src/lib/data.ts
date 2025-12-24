@@ -19,17 +19,20 @@ export const Barbers: Barber[] = [
   },
 ];
 
-export function generateTimeSlots(start: number, end: number): TimeSlot[] {
-    const slots = [];
-    for (let i = start; i < end; i++) {
-        for (let j = 0; j < 2; j++) {
-            const hour = i.toString().padStart(2, '0');
-            const minute = (j * 30).toString().padStart(2, '0');
-            // Make reservation random but consistent across renders
-            const seed = i + j;
-            const isReserved = (seed * 13) % 7 > 4
-            slots.push({ time: `${hour}:${minute}`, isReserved: isReserved });
-        }
+export function generateTimeSlots(startHour: number, endHour: number, slotDuration: number): TimeSlot[] {
+    const slots: TimeSlot[] = [];
+    const startTime = new Date();
+    startTime.setHours(startHour, 0, 0, 0);
+
+    const endTime = new Date();
+    endTime.setHours(endHour, 0, 0, 0);
+
+    while (startTime < endTime) {
+        const hour = startTime.getHours().toString().padStart(2, '0');
+        const minute = startTime.getMinutes().toString().padStart(2, '0');
+        slots.push({ time: `${hour}:${minute}`, isReserved: false });
+        startTime.setMinutes(startTime.getMinutes() + slotDuration);
     }
+
     return slots;
 }
