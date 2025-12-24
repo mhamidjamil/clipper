@@ -11,14 +11,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Barber, TimeSlot, BarberSchedule, Booking } from '@/lib/types';
 import { Barbers, generateTimeSlots } from '@/lib/data';
 import { AuthProvider, useAuth } from '@/components/auth-provider';
-import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Users, Briefcase } from 'lucide-react';
@@ -27,82 +24,32 @@ import { Users, Briefcase } from 'lucide-react';
 const db = getFirestore(app);
 
 function Header({ role, setRole }: { role: 'client' | 'barber', setRole: (role: 'client' | 'barber') => void }) {
-  const { toast } = useToast();
-  const { user } = useAuth();
-
-  const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      if (error.code === 'auth/cancelled-popup-request') {
-        // User cancelled the login, do nothing.
-        return;
-      } else if (error.code === 'auth/configuration-not-found') {
-        toast({
-          variant: 'destructive',
-          title: 'Action Required: Authorize Your App\'s Domain',
-          description: "To fix login, go to the Firebase Console -> Authentication -> Settings -> Authorized Domains, and add 'cloudworkstations.dev'. Also ensure Google is an enabled Sign-in provider.",
-          duration: 20000,
-        });
-      } else {
-        console.error('Error signing in with Google: ', error);
-        toast({
-          variant: 'destructive',
-          title: 'Login Error',
-          description: error.message,
-        });
-      }
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Error signing out: ', error);
-    }
-  };
 
   return (
     <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
       <div className="container mx-auto flex h-14 items-center justify-between px-4 md:px-6">
         <h1 className="text-xl font-bold tracking-tight">Clipper Scheduler</h1>
         <div className="flex items-center gap-4">
-          {user && (
-             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    {role === 'client' ? <Users /> : <Briefcase />}
-                    <span>{role === 'client' ? 'Client View' : 'Barber View'}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
-                  <DropdownMenuRadioGroup value={role} onValueChange={(value) => setRole(value as 'client' | 'barber')}>
-                    <DropdownMenuRadioItem value="client">
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>Client View</span>
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="barber">
-                      <Briefcase className="mr-2 h-4 w-4" />
-                      <span>Barber View</span>
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-          )}
-          {user ? (
-            <div className="flex items-center gap-4">
-              <span className="font-medium hidden sm:inline">Welcome, {user.displayName?.split(' ')[0]}</span>
-              <Button variant="outline" onClick={handleLogout}>
-                Logout
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                {role === 'client' ? <Users /> : <Briefcase />}
+                <span>{role === 'client' ? 'Client View' : 'Barber View'}</span>
               </Button>
-            </div>
-          ) : (
-            <Button variant="outline" onClick={handleLogin}>
-              Login
-            </Button>
-          )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuRadioGroup value={role} onValueChange={(value) => setRole(value as 'client' | 'barber')}>
+                <DropdownMenuRadioItem value="client">
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>Client View</span>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="barber">
+                  <Briefcase className="mr-2 h-4 w-4" />
+                  <span>Barber View</span>
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>
@@ -143,14 +90,14 @@ function ClientView() {
     slot: TimeSlot,
     date: Date
   ) => {
-    if (!user) {
-      toast({
-        variant: 'destructive',
-        title: 'Please log in',
-        description: 'You need to be logged in to book an appointment.',
-      });
-      return;
-    }
+    // if (!user) {
+    //   toast({
+    //     variant: 'destructive',
+    //     title: 'Please log in',
+    //     description: 'You need to be logged in to book an appointment.',
+    //   });
+    //   return;
+    // }
 
     const bookingDate = date.toISOString().split('T')[0];
     const isAlreadyBooked = bookings.some(
@@ -176,8 +123,8 @@ function ClientView() {
       const newBooking: Booking = {
         id: bookingId,
         barberId,
-        clientId: user.uid,
-        clientName: user.displayName,
+        clientId: 'placeholder-client-id', // Using a placeholder
+        clientName: 'Placeholder Client', // Using a placeholder
         date: bookingDate,
         time: slot.time,
       };
@@ -265,24 +212,12 @@ function BarberView() {
 
 function HomePage() {
   const [role, setRole] = useState<'client' | 'barber'>('client');
-  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
       <Header role={role} setRole={setRole} />
       <main className="container mx-auto p-4 md:p-6">
-        {!user ? (
-           <div className="flex items-center justify-center h-[50vh]">
-              <Card className="p-8 text-center">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Welcome to Clipper Scheduler</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>Please log in to view available appointments and manage your schedule.</p>
-                </CardContent>
-              </Card>
-           </div>
-        ) : role === 'client' ? <ClientView /> : <BarberView />}
+        {role === 'client' ? <ClientView /> : <BarberView />}
       </main>
     </div>
   );
