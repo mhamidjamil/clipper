@@ -18,8 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { useToast } from '@/hooks/use-toast';
-import { Barber, TimeSlot, BarberSchedule, Booking } from '@/lib/types';
-import { Barbers, generateTimeSlots } from '@/lib/data';
+import { TimeSlot, BarberSchedule, Booking, UserProfile } from '@/lib/types';
+import { generateTimeSlots } from '@/lib/data';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,7 +83,7 @@ function Header() {
                       alt={user.displayName ?? 'User'}
                     />
                     <AvatarFallback>
-                      {user.displayName?.charAt(0) ?? user.email?.charAt(0)}
+                      {userProfile?.name?.charAt(0) ?? user.email?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -104,7 +104,7 @@ function Header() {
 
 function ClientView() {
   const { toast } = useToast();
-  const [barbers] = useState<Barber[]>(Barbers);
+  const [barbers, setBarbers] = useState<UserProfile[]>([]);
   const [schedules, setSchedules] = useState<BarberSchedule[]>([]);
   const { user, db } = useUser();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -114,24 +114,41 @@ function ClientView() {
 
   useEffect(() => {
     if (!db) return;
+
+    // Fetch barbers
+    const barbersQuery = query(
+      collection(db, 'users'),
+      where('role', '==', 'barber')
+    );
+    const unsubscribeBarbers = onSnapshot(barbersQuery, (snapshot) => {
+      const barbersData = snapshot.docs.map(
+        (doc) => doc.data() as UserProfile
+      );
+      setBarbers(barbersData);
+
+      const barberSchedules: BarberSchedule[] = barbersData.map((barber) => ({
+        barberId: barber.uid,
+        availableSlots: generateTimeSlots(9, 17, 30),
+      }));
+      setSchedules(barberSchedules);
+    });
+
+    // Fetch bookings
     const bookingsQuery = query(
       collection(db, 'bookings'),
       where('date', '>=', todayDateString)
     );
-    const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
+    const unsubscribeBookings = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookedSlots = querySnapshot.docs.map(
         (doc) => doc.data() as Booking
       );
       setBookings(bookedSlots);
     });
 
-    const barberSchedules: BarberSchedule[] = Barbers.map((barber) => ({
-      barberId: barber.id,
-      availableSlots: generateTimeSlots(9, 17, 30),
-    }));
-
-    setSchedules(barberSchedules);
-    return () => unsubscribe();
+    return () => {
+      unsubscribeBarbers();
+      unsubscribeBookings();
+    };
   }, [db, todayDateString]);
 
   const bookAppointment = async (
@@ -196,7 +213,7 @@ function ClientView() {
   };
 
   const filteredBarbers = barbers.filter((barber) =>
-    barber.name.toLowerCase().includes(searchTerm.toLowerCase())
+    barber.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -213,15 +230,15 @@ function ClientView() {
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
         {filteredBarbers.map((barber) => {
           const barberSchedule = schedules.find(
-            (s) => s.barberId === barber.id
+            (s) => s.barberId === barber.uid
           );
 
           return (
-            <Card key={barber.id}>
+            <Card key={barber.uid}>
               <CardHeader className="flex flex-row items-center gap-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={barber.avatarUrl} alt={barber.name} />
-                  <AvatarFallback>{barber.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={''} alt={barber.name} />
+                  <AvatarFallback>{barber.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
                   <CardTitle>{barber.name}</CardTitle>
@@ -235,7 +252,7 @@ function ClientView() {
                   {barberSchedule?.availableSlots.map((slot) => {
                     const isBooked = bookings.some(
                       (b) =>
-                        b.barberId === barber.id &&
+                        b.barberId === barber.uid &&
                         b.time === slot.time &&
                         b.date === todayDateString
                     );
@@ -245,7 +262,7 @@ function ClientView() {
                         key={slot.time}
                         variant={isBooked ? 'destructive' : 'outline'}
                         disabled={isBooked}
-                        onClick={() => bookAppointment(barber.id, slot, today)}
+                        onClick={() => bookAppointment(barber.uid, slot, today)}
                       >
                         {slot.time}
                       </Button>
@@ -263,21 +280,39 @@ function ClientView() {
 
 function BarberView() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [barbers, setBarbers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const { db } = useUser();
+  const { user, db } = useUser();
 
   useEffect(() => {
     if (!db) return;
-    const bookingsQuery = query(collection(db, 'bookings'));
-    const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
+    const bookingsQuery = query(
+      collection(db, 'bookings'),
+      where('barberId', '==', user?.uid)
+    );
+    const unsubscribeBookings = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookingsData = querySnapshot.docs.map(
         (doc) => doc.data() as Booking
       );
       setBookings(bookingsData);
     });
+    
+    const barbersQuery = query(
+      collection(db, 'users'),
+      where('role', '==', 'barber')
+    );
+    const unsubscribeBarbers = onSnapshot(barbersQuery, (snapshot) => {
+      const barbersData = snapshot.docs.map(
+        (doc) => doc.data() as UserProfile
+      );
+      setBarbers(barbersData);
+    });
 
-    return () => unsubscribe();
-  }, [db]);
+    return () => {
+      unsubscribeBookings();
+      unsubscribeBarbers();
+    };
+  }, [db, user]);
 
   const filteredBookings = bookings.filter((booking) =>
     booking.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -286,7 +321,7 @@ function BarberView() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Client Bookings</CardTitle>
+        <CardTitle>Your Bookings</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="mb-4 flex items-center gap-2">
@@ -302,28 +337,23 @@ function BarberView() {
           <TableHeader>
             <TableRow>
               <TableHead>Client Name</TableHead>
-              <TableHead>Barber</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Time</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredBookings.length > 0 ? (
-              filteredBookings.map((booking) => {
-                const barber = Barbers.find((b) => b.id === booking.barberId);
-                return (
-                  <TableRow key={booking.id}>
-                    <TableCell>{booking.clientName}</TableCell>
-                    <TableCell>{barber ? barber.name : 'Unknown'}</TableCell>
-                    <TableCell>{booking.date}</TableCell>
-                    <TableCell>{booking.time}</TableCell>
-                  </TableRow>
-                );
-              })
+              filteredBookings.map((booking) => (
+                <TableRow key={booking.id}>
+                  <TableCell>{booking.clientName}</TableCell>
+                  <TableCell>{booking.date}</TableCell>
+                  <TableCell>{booking.time}</TableCell>
+                </TableRow>
+              ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">
-                  No bookings found.
+                <TableCell colSpan={3} className="text-center">
+                  You have no bookings.
                 </TableCell>
               </TableRow>
             )}
