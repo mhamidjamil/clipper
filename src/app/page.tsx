@@ -59,11 +59,9 @@ function Header() {
         <div className="flex items-center gap-4">
           {userProfile?.role === 'barber' && (
             <Link href="/availability" passHref>
-              <Button variant="outline" size="icon" asChild>
-                <span>
-                  <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
-                  <span className="sr-only">Manage Availability</span>
-                </span>
+              <Button variant="outline" size="icon">
+                <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
+                <span className="sr-only">Manage Availability</span>
               </Button>
             </Link>
           )}
@@ -343,7 +341,7 @@ function HomePage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login');
+      router.push('/welcome');
     }
   }, [user, loading, router]);
 
