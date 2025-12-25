@@ -191,7 +191,7 @@ function ClientView() {
         id: bookingId,
         barberId,
         clientId: user.uid,
-        clientName: user.displayName || 'Anonymous',
+        clientName: user.displayName || userProfile?.name || 'Anonymous',
         date: bookingDate,
         time: slot.time,
       };
@@ -280,15 +280,14 @@ function ClientView() {
 
 function BarberView() {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [barbers, setBarbers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const { user, db } = useUser();
 
   useEffect(() => {
-    if (!db) return;
+    if (!db || !user) return;
     const bookingsQuery = query(
       collection(db, 'bookings'),
-      where('barberId', '==', user?.uid)
+      where('barberId', '==', user.uid)
     );
     const unsubscribeBookings = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookingsData = querySnapshot.docs.map(
@@ -297,20 +296,8 @@ function BarberView() {
       setBookings(bookingsData);
     });
     
-    const barbersQuery = query(
-      collection(db, 'users'),
-      where('role', '==', 'barber')
-    );
-    const unsubscribeBarbers = onSnapshot(barbersQuery, (snapshot) => {
-      const barbersData = snapshot.docs.map(
-        (doc) => doc.data() as UserProfile
-      );
-      setBarbers(barbersData);
-    });
-
     return () => {
       unsubscribeBookings();
-      unsubscribeBarbers();
     };
   }, [db, user]);
 

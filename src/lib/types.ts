@@ -1,10 +1,4 @@
 
-export interface Barber {
-  id: string;
-  name: string;
-  avatarUrl: string;
-}
-
 export interface TimeSlot {
   time: string;
   isReserved: boolean;
