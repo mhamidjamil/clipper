@@ -17,7 +17,13 @@ import Link from 'next/link';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -34,7 +40,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CalendarDays, Search, Moon, Sun, LogOut } from 'lucide-react';
+import {
+  CalendarDays,
+  Search,
+  Moon,
+  Sun,
+  LogOut,
+  Phone,
+  MapPin,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -273,13 +287,25 @@ function ClientView() {
 
           return (
             <Card key={barber.uid}>
-              <CardHeader className="flex flex-row items-center gap-4">
+              <CardHeader className="flex flex-row items-start gap-4">
                 <Avatar className="h-16 w-16">
                   <AvatarImage src={''} alt={barber.name} />
                   <AvatarFallback>{barber.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="flex-1">
                   <CardTitle>{barber.name}</CardTitle>
+                  {barber.mobileNumber && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                      <Phone className="h-4 w-4" />
+                      <span>{barber.mobileNumber}</span>
+                    </div>
+                  )}
+                  {barber.address && (
+                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span>{barber.address}</span>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
