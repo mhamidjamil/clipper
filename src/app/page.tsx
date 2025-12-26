@@ -42,7 +42,7 @@ import {
   ServiceCategory,
 } from '@/lib/types';
 import { generateTimeSlots } from '@/lib/data';
-import { Search, Phone, MapPin, Clock, Tag } from 'lucide-react';
+import { Search, Phone, MapPin, Clock, Tag, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Table,
