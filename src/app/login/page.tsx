@@ -16,12 +16,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { auth } = useFirebase();
@@ -37,6 +38,7 @@ export default function LoginPage() {
       });
       return;
     }
+    setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
@@ -46,6 +48,8 @@ export default function LoginPage() {
         title: 'Login Failed',
         description: error.message,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -96,7 +100,10 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col">
-            <Button className="w-full" type="submit">
+            <Button className="w-full" type="submit" disabled={isSubmitting}>
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Sign in
             </Button>
             <div className="mt-4 text-center text-sm">
