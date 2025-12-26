@@ -37,13 +37,13 @@ const formSchema = z
     email: z.string().email('Invalid email address'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
     role: z.enum(['client', 'barber']),
-    mobileNumber: z.string(),
-    address: z.string(),
+    mobileNumber: z.string().optional(),
+    address: z.string().optional(),
   })
   .refine(
     (data) => {
       if (data.role === 'barber') {
-        return data.mobileNumber.length > 0;
+        return data.mobileNumber && data.mobileNumber.length > 0;
       }
       return true;
     },
@@ -55,7 +55,7 @@ const formSchema = z
   .refine(
     (data) => {
       if (data.role === 'barber') {
-        return data.address.length > 0;
+        return data.address && data.address.length > 0;
       }
       return true;
     },
@@ -112,8 +112,11 @@ export default function SignupPage() {
         name: values.name,
       };
 
-      if (values.role === 'barber') {
+      if (values.mobileNumber) {
         userProfile.mobileNumber = values.mobileNumber;
+      }
+
+      if (values.role === 'barber') {
         userProfile.address = values.address;
       }
 
@@ -214,21 +217,21 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="mobileNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mobile Number {role === 'barber' && '(Required)'}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123-456-7890" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               {role === 'barber' && (
                 <>
-                  <FormField
-                    control={form.control}
-                    name="mobileNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Mobile Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="123-456-7890" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <FormField
                     control={form.control}
                     name="address"
