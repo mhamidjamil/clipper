@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import type { Availability } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { Header } from '@/components/Header';
 
 const daysOfWeek = [
   'sunday',
@@ -138,95 +139,104 @@ export default function AvailabilityPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl p-4 md:p-6">
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Manage Your Availability</CardTitle>
-            <CardDescription>
-              Set your weekly schedule and appointment duration. Clients will
-              only be able to book in your available slots.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            <div className="space-y-4 rounded-md border p-4">
-              <h3 className="text-lg font-medium">Weekly Hours</h3>
-              <div className="space-y-4">
-                {daysOfWeek.map((day) => (
-                  <div
-                    key={day}
-                    className="flex flex-col items-start gap-4 rounded-md border p-4 sm:flex-row sm:items-center"
-                  >
-                    <div className="flex w-full items-center gap-4 sm:w-auto">
-                      <Switch
-                        id={`switch-${day}`}
-                        checked={schedule[day].isEnabled}
-                        onCheckedChange={(checked) =>
-                          handleDayToggle(day, checked)
-                        }
-                      />
-                      <Label htmlFor={`switch-${day}`} className="w-20 capitalize">
-                        {day}
-                      </Label>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="container mx-auto max-w-4xl p-4 md:p-6">
+        <form onSubmit={handleSubmit}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage Your Availability</CardTitle>
+              <CardDescription>
+                Set your weekly schedule and appointment duration. Clients will
+                only be able to book in your available slots.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <div className="space-y-4 rounded-md border p-4">
+                <h3 className="text-lg font-medium">Weekly Hours</h3>
+                <div className="space-y-4">
+                  {daysOfWeek.map((day) => (
+                    <div
+                      key={day}
+                      className="flex flex-col items-start gap-4 rounded-md border p-4 sm:flex-row sm:items-center"
+                    >
+                      <div className="flex w-full items-center gap-4 sm:w-auto">
+                        <Switch
+                          id={`switch-${day}`}
+                          checked={schedule[day].isEnabled}
+                          onCheckedChange={(checked) =>
+                            handleDayToggle(day, checked)
+                          }
+                        />
+                        <Label
+                          htmlFor={`switch-${day}`}
+                          className="w-20 capitalize"
+                        >
+                          {day}
+                        </Label>
+                      </div>
+                      <div className="flex w-full flex-1 items-center gap-4">
+                        <Input
+                          type="time"
+                          value={schedule[day].startTime}
+                          onChange={(e) =>
+                            handleTimeChange(day, 'startTime', e.target.value)
+                          }
+                          disabled={!schedule[day].isEnabled}
+                          className="w-full sm:w-auto"
+                        />
+                        <span>to</span>
+                        <Input
+                          type="time"
+                          value={schedule[day].endTime}
+                          onChange={(e) =>
+                            handleTimeChange(day, 'endTime', e.target.value)
+                          }
+                          disabled={!schedule[day].isEnabled}
+                          className="w-full sm:w-auto"
+                        />
+                      </div>
                     </div>
-                    <div className="flex w-full flex-1 items-center gap-4">
-                      <Input
-                        type="time"
-                        value={schedule[day].startTime}
-                        onChange={(e) =>
-                          handleTimeChange(day, 'startTime', e.target.value)
-                        }
-                        disabled={!schedule[day].isEnabled}
-                        className="w-full sm:w-auto"
-                      />
-                      <span>to</span>
-                      <Input
-                        type="time"
-                        value={schedule[day].endTime}
-                        onChange={(e) =>
-                          handleTimeChange(day, 'endTime', e.target.value)
-                        }
-                        disabled={!schedule[day].isEnabled}
-                        className="w-full sm:w-auto"
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2 rounded-md border p-4">
-               <h3 className="text-lg font-medium">Booking Settings</h3>
-              <Label htmlFor="slotDuration">Appointment Duration</Label>
-              <Select
-                value={String(slotDuration)}
-                onValueChange={(value) => setSlotDuration(Number(value))}
-              >
-                <SelectTrigger id="slotDuration" className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">15 minutes</SelectItem>
-                  <SelectItem value="30">30 minutes</SelectItem>
-                  <SelectItem value="45">45 minutes</SelectItem>
-                  <SelectItem value="60">60 minutes</SelectItem>
-                </SelectContent>
-              </Select>
-               <p className="text-sm text-muted-foreground">
-                The duration of each appointment slot.
-              </p>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Save Changes
-            </Button>
-          </CardFooter>
-        </Card>
-      </form>
+              <div className="space-y-2 rounded-md border p-4">
+                <h3 className="text-lg font-medium">Booking Settings</h3>
+                <Label htmlFor="slotDuration">Appointment Duration</Label>
+                <Select
+                  value={String(slotDuration)}
+                  onValueChange={(value) => setSlotDuration(Number(value))}
+                >
+                  <SelectTrigger
+                    id="slotDuration"
+                    className="w-full sm:w-[180px]"
+                  >
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="45">45 minutes</SelectItem>
+                    <SelectItem value="60">60 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  The duration of each appointment slot.
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Changes
+              </Button>
+            </CardFooter>
+          </Card>
+        </form>
+      </main>
     </div>
   );
 }
