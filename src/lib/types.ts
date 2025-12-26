@@ -24,4 +24,5 @@ export interface UserProfile {
   role: 'client' | 'barber';
   name?: string;
   mobileNumber?: string;
+  address?: string;
 }

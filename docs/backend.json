@@ -27,6 +27,10 @@
         "mobileNumber": {
             "type": "string",
             "description": "The user's mobile phone number."
+        },
+        "address": {
+            "type": "string",
+            "description": "The barber's address."
         }
       },
       "required": ["uid", "email", "role"]

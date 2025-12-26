@@ -1,3 +1,4 @@
+
 'use client';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -37,6 +38,7 @@ const formSchema = z
     password: z.string().min(6, 'Password must be at least 6 characters'),
     role: z.enum(['client', 'barber']),
     mobileNumber: z.string(),
+    address: z.string(),
   })
   .refine(
     (data) => {
@@ -48,6 +50,18 @@ const formSchema = z
     {
       message: 'Mobile number is required for barbers',
       path: ['mobileNumber'],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.role === 'barber') {
+        return data.address.length > 0;
+      }
+      return true;
+    },
+    {
+      message: 'Address is required for barbers',
+      path: ['address'],
     }
   );
 
@@ -66,6 +80,7 @@ export default function SignupPage() {
       password: '',
       role: 'client',
       mobileNumber: '',
+      address: '',
     },
   });
 
@@ -89,6 +104,9 @@ export default function SignupPage() {
 
       if (values.mobileNumber) {
         userProfile.mobileNumber = values.mobileNumber;
+      }
+      if (values.address) {
+        userProfile.address = values.address;
       }
 
       await setDoc(doc(db, 'users', user.uid), userProfile);
@@ -164,6 +182,21 @@ export default function SignupPage() {
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="123-456-7890" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Address {role === 'barber' && '(Required)'}
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main St, Anytown USA" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
