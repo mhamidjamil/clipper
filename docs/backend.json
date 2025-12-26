@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -77,6 +78,34 @@
         }
       },
       "required": ["barberId", "slotDuration", "schedule"]
+    },
+    "ServiceCategory": {
+      "title": "Service Category",
+      "description": "Represents a service offered by a barber.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique ID for the service category."
+        },
+        "barberId": {
+          "type": "string",
+          "description": "The UID of the barber offering the service."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the service (e.g., Haircut, Shave)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "The time required for the service in minutes."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the service in PKR."
+        }
+      },
+      "required": ["id", "barberId", "name", "duration", "price"]
     }
   },
   "auth": {
@@ -94,6 +123,12 @@
         "$ref": "#/entities/Availability"
       },
       "description": "Stores the weekly availability for each barber."
+    },
+    "/services/{serviceId}": {
+      "schema": {
+        "$ref": "#/entities/ServiceCategory"
+      },
+      "description": "Stores the services offered by barbers."
     }
   }
 }

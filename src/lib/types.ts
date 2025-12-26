@@ -1,3 +1,4 @@
+
 export interface TimeSlot {
   time: string;
   isReserved: boolean;
@@ -38,4 +39,12 @@ export interface Availability {
   schedule: {
     [day: string]: DaySchedule;
   };
+}
+
+export interface ServiceCategory {
+  id: string;
+  barberId: string;
+  name: string;
+  duration: number; // in minutes
+  price: number; // in PKR
 }

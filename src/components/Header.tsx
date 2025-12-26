@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useTheme } from 'next-themes';
@@ -14,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, LogOut, Moon, Sun } from 'lucide-react';
+import { CalendarDays, LogOut, Moon, Sun, List } from 'lucide-react';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -35,12 +36,20 @@ export function Header() {
         </Link>
         <div className="flex items-center gap-4">
           {userProfile?.role === 'barber' && (
-            <Link href="/availability" passHref>
-              <Button variant="outline" size="icon">
-                <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
-                <span className="sr-only">Manage Availability</span>
-              </Button>
-            </Link>
+            <>
+              <Link href="/categories" passHref>
+                <Button variant="outline" size="icon">
+                  <List className="h-[1.2rem] w-[1.2rem]" />
+                  <span className="sr-only">Manage Categories</span>
+                </Button>
+              </Link>
+              <Link href="/availability" passHref>
+                <Button variant="outline" size="icon">
+                  <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
+                  <span className="sr-only">Manage Availability</span>
+                </Button>
+              </Link>
+            </>
           )}
           <Button
             variant="outline"
