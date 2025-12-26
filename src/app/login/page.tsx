@@ -27,6 +27,14 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth) {
+        toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: 'Authentication service is not available. Please try again later.',
+        });
+        return;
+    }
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
@@ -68,7 +76,7 @@ export default function LoginPage() {
                 type="password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.targe.value)}
               />
             </div>
           </CardContent>
