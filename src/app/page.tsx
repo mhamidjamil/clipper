@@ -9,6 +9,8 @@ import {
   collection,
   query,
   where,
+  getDocs,
+  getDoc,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -18,7 +20,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { useToast } from '@/hooks/use-toast';
-import { TimeSlot, BarberSchedule, Booking, UserProfile } from '@/lib/types';
+import {
+  TimeSlot,
+  BarberSchedule,
+  Booking,
+  UserProfile,
+  Availability,
+} from '@/lib/types';
 import { generateTimeSlots } from '@/lib/data';
 import {
   DropdownMenu,
@@ -106,32 +114,63 @@ function ClientView() {
   const { toast } = useToast();
   const [barbers, setBarbers] = useState<UserProfile[]>([]);
   const [schedules, setSchedules] = useState<BarberSchedule[]>([]);
-  const { user, db } = useUser();
+  const { user, db, userProfile } = useUser();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const today = new Date();
+  const todayDayName = today
+    .toLocaleDateString('en-US', { weekday: 'long' })
+    .toLowerCase();
   const todayDateString = today.toISOString().split('T')[0];
 
   useEffect(() => {
     if (!db) return;
 
-    // Fetch barbers
-    const barbersQuery = query(
-      collection(db, 'users'),
-      where('role', '==', 'barber')
-    );
-    const unsubscribeBarbers = onSnapshot(barbersQuery, (snapshot) => {
-      const barbersData = snapshot.docs.map(
+    const fetchBarbersAndSchedules = async () => {
+      const barbersQuery = query(
+        collection(db, 'users'),
+        where('role', '==', 'barber')
+      );
+      const barbersSnapshot = await getDocs(barbersQuery);
+      const barbersData = barbersSnapshot.docs.map(
         (doc) => doc.data() as UserProfile
       );
       setBarbers(barbersData);
 
-      const barberSchedules: BarberSchedule[] = barbersData.map((barber) => ({
-        barberId: barber.uid,
-        availableSlots: generateTimeSlots(9, 17, 30),
-      }));
+      const barberSchedules: BarberSchedule[] = [];
+      for (const barber of barbersData) {
+        const availabilityRef = doc(db, 'availability', barber.uid);
+        const availabilitySnap = await getDoc(availabilityRef);
+
+        let availableSlots: TimeSlot[] = [];
+        if (availabilitySnap.exists()) {
+          const availability = availabilitySnap.data() as Availability;
+          const daySchedule = availability.schedule[todayDayName];
+          if (daySchedule && daySchedule.isEnabled) {
+            const [startHour, startMinute] = daySchedule.startTime
+              .split(':')
+              .map(Number);
+            const [endHour, endMinute] = daySchedule.endTime
+              .split(':')
+              .map(Number);
+            availableSlots = generateTimeSlots(
+              startHour,
+              startMinute,
+              endHour,
+              endMinute,
+              availability.slotDuration
+            );
+          }
+        }
+        barberSchedules.push({
+          barberId: barber.uid,
+          availableSlots,
+        });
+      }
       setSchedules(barberSchedules);
-    });
+    };
+
+    fetchBarbersAndSchedules();
 
     // Fetch bookings
     const bookingsQuery = query(
@@ -146,10 +185,9 @@ function ClientView() {
     });
 
     return () => {
-      unsubscribeBarbers();
       unsubscribeBookings();
     };
-  }, [db, todayDateString]);
+  }, [db, todayDateString, todayDayName]);
 
   const bookAppointment = async (
     barberId: string,
@@ -249,25 +287,33 @@ function ClientView() {
                   Available Slots for Today
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {barberSchedule?.availableSlots.map((slot) => {
-                    const isBooked = bookings.some(
-                      (b) =>
-                        b.barberId === barber.uid &&
-                        b.time === slot.time &&
-                        b.date === todayDateString
-                    );
+                  {barberSchedule && barberSchedule.availableSlots.length > 0 ? (
+                    barberSchedule.availableSlots.map((slot) => {
+                      const isBooked = bookings.some(
+                        (b) =>
+                          b.barberId === barber.uid &&
+                          b.time === slot.time &&
+                          b.date === todayDateString
+                      );
 
-                    return (
-                      <Button
-                        key={slot.time}
-                        variant={isBooked ? 'destructive' : 'outline'}
-                        disabled={isBooked}
-                        onClick={() => bookAppointment(barber.uid, slot, today)}
-                      >
-                        {slot.time}
-                      </Button>
-                    );
-                  })}
+                      return (
+                        <Button
+                          key={slot.time}
+                          variant={isBooked ? 'destructive' : 'outline'}
+                          disabled={isBooked}
+                          onClick={() =>
+                            bookAppointment(barber.uid, slot, today)
+                          }
+                        >
+                          {slot.time}
+                        </Button>
+                      );
+                    })
+                  ) : (
+                    <p className="col-span-3 text-muted-foreground">
+                      No available slots for today.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

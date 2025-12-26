@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -34,6 +33,50 @@
         }
       },
       "required": ["uid", "email", "role"]
+    },
+    "DaySchedule": {
+      "title": "Day Schedule",
+      "description": "Defines the working hours for a specific day.",
+      "type": "object",
+      "properties": {
+        "isEnabled": {
+          "type": "boolean"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "time"
+        }
+      }
+    },
+    "Availability": {
+      "title": "Barber Availability",
+      "description": "Stores a barber's weekly availability schedule.",
+      "type": "object",
+      "properties": {
+        "barberId": {
+          "type": "string",
+          "description": "The UID of the barber."
+        },
+        "slotDuration": {
+          "type": "number",
+          "description": "Duration of each appointment slot in minutes."
+        },
+        "schedule": {
+          "type": "object",
+          "description": "Weekly schedule, with keys as lowercase day names (e.g., 'sunday').",
+          "patternProperties": {
+            "^(sunday|monday|tuesday|wednesday|thursday|friday|saturday)$": {
+              "$ref": "#/entities/DaySchedule"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["barberId", "slotDuration", "schedule"]
     }
   },
   "auth": {
@@ -45,6 +88,12 @@
         "$ref": "#/entities/UserProfile"
       },
       "description": "Stores user profile information."
+    },
+    "/availability/{barberId}": {
+      "schema": {
+        "$ref": "#/entities/Availability"
+      },
+      "description": "Stores the weekly availability for each barber."
     }
   }
 }

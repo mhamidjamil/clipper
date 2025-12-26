@@ -1,4 +1,3 @@
-
 export interface TimeSlot {
   time: string;
   isReserved: boolean;
@@ -25,4 +24,18 @@ export interface UserProfile {
   name?: string;
   mobileNumber?: string;
   address?: string;
+}
+
+export interface DaySchedule {
+  isEnabled: boolean;
+  startTime: string;
+  endTime: string;
+}
+
+export interface Availability {
+  barberId: string;
+  slotDuration: number; // in minutes
+  schedule: {
+    [day: string]: DaySchedule;
+  };
 }
