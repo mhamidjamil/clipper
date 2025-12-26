@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { UserProfile } from '@/lib/types';
+import type { UserProfile } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -70,7 +70,7 @@ type SignupFormValues = z.infer<typeof formSchema>;
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { auth, db } = useFirebase();
+  const firebaseContext = useFirebase();
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(formSchema),
@@ -87,6 +87,16 @@ export default function SignupPage() {
   const role = form.watch('role');
 
   const handleSignup = async (values: SignupFormValues) => {
+    if (!firebaseContext) {
+      toast({
+        variant: 'destructive',
+        title: 'Signup Failed',
+        description: 'Firebase is not initialized.',
+      });
+      return;
+    }
+    const { auth, db } = firebaseContext;
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -103,12 +113,8 @@ export default function SignupPage() {
       };
 
       if (values.role === 'barber') {
-        if (values.mobileNumber) {
-          userProfile.mobileNumber = values.mobileNumber;
-        }
-        if (values.address) {
-          userProfile.address = values.address;
-        }
+        userProfile.mobileNumber = values.mobileNumber;
+        userProfile.address = values.address;
       }
 
       await setDoc(doc(db, 'users', user.uid), userProfile);
