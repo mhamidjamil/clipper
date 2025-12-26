@@ -102,11 +102,13 @@ export default function SignupPage() {
         name: values.name,
       };
 
-      if (values.mobileNumber) {
-        userProfile.mobileNumber = values.mobileNumber;
-      }
-      if (values.address) {
-        userProfile.address = values.address;
+      if (values.role === 'barber') {
+        if (values.mobileNumber) {
+          userProfile.mobileNumber = values.mobileNumber;
+        }
+        if (values.address) {
+          userProfile.address = values.address;
+        }
       }
 
       await setDoc(doc(db, 'users', user.uid), userProfile);
@@ -174,36 +176,6 @@ export default function SignupPage() {
               />
               <FormField
                 control={form.control}
-                name="mobileNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Mobile Number {role === 'barber' && '(Required)'}
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="123-456-7890" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Address {role === 'barber' && '(Required)'}
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="123 Main St, Anytown USA" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="role"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
@@ -236,6 +208,39 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+              {role === 'barber' && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="mobileNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mobile Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123-456-7890" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="123 Main St, Anytown USA"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
             </CardContent>
             <CardFooter className="flex flex-col">
               <Button className="w-full" type="submit">
