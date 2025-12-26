@@ -30,6 +30,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const formSchema = z
   .object({
@@ -71,6 +73,7 @@ export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firebaseContext = useFirebase();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(formSchema),
@@ -115,8 +118,8 @@ export default function SignupPage() {
       if (values.mobileNumber) {
         userProfile.mobileNumber = values.mobileNumber;
       }
-
-      if (values.role === 'barber') {
+      
+      if (values.role === 'barber' && values.address) {
         userProfile.address = values.address;
       }
 
@@ -177,7 +180,23 @@ export default function SignupPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -222,7 +241,9 @@ export default function SignupPage() {
                 name="mobileNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mobile Number {role === 'barber' && '(Required)'}</FormLabel>
+                    <FormLabel>
+                      Mobile Number {role === 'barber' && '(Required)'}
+                    </FormLabel>
                     <FormControl>
                       <Input placeholder="123-456-7890" {...field} />
                     </FormControl>
@@ -237,7 +258,7 @@ export default function SignupPage() {
                     name="address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Address</FormLabel>
+                        <FormLabel>Address (Required)</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="123 Main St, Anytown USA"
