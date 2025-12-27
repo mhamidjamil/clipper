@@ -22,12 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
 
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -38,7 +33,7 @@ import {
   ServiceCategory,
 } from '@/lib/types';
 import { generateTimeSlots } from '@/lib/data';
-import { Search, Phone, MapPin, Clock, Tag, Loader2 } from 'lucide-react';
+import { Search, Phone, MapPin, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -149,8 +144,11 @@ function ClientView() {
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
         {filteredBarbers.map((barber) => {
           return (
-            <Link href={`/book/${barber.uid}`} key={barber.uid} passHref>
-              <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1">
+            <Card
+              key={barber.uid}
+              className="flex h-full flex-col justify-between transition-all hover:shadow-lg"
+            >
+              <div>
                 <CardHeader className="flex flex-row items-start gap-4">
                   <Avatar className="h-16 w-16">
                     <AvatarImage src={''} alt={barber.name} />
@@ -173,12 +171,30 @@ function ClientView() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                   <Button variant="outline" className="w-full">
+                  <h4 className="mb-2 font-semibold">Services</h4>
+                  {barber.services.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {barber.services.map((service) => (
+                        <Badge key={service.id} variant="secondary">
+                          {service.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No services listed.
+                    </p>
+                  )}
+                </CardContent>
+              </div>
+              <CardContent>
+                <Link href={`/book/${barber.uid}`} passHref>
+                  <Button variant="outline" className="w-full">
                     Book Appointment
                   </Button>
-                </CardContent>
-              </Card>
-            </Link>
+                </Link>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
