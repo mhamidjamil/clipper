@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -51,6 +50,7 @@ import {
 } from '@/components/ui/table';
 import { useUser } from '@/firebase';
 import { Header } from '@/components/Header';
+import Link from 'next/link';
 
 type BarberProfile = UserProfile & {
   services: ServiceCategory[];
@@ -61,14 +61,8 @@ function ClientView() {
   const { toast } = useToast();
   const [barbers, setBarbers] = useState<BarberProfile[]>([]);
   const { user, db, userProfile } = useUser();
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const today = new Date();
-  const todayDayName = today
-    .toLocaleDateString('en-US', { weekday: 'long' })
-    .toLowerCase();
-  const todayDateString = today.toISOString().split('T')[0];
 
   useEffect(() => {
     if (!db) return;
@@ -76,7 +70,6 @@ function ClientView() {
 
     const fetchBarbersData = async () => {
       try {
-        // 1. Fetch all barbers
         const barbersQuery = query(
           collection(db, 'users'),
           where('role', '==', 'barber')
@@ -86,22 +79,22 @@ function ClientView() {
           (doc) => doc.data() as UserProfile
         );
 
-        // 2. For each barber, fetch their services and availability
         const enhancedBarbers = await Promise.all(
           barbersData.map(async (barber) => {
-            // Fetch Services
             const servicesQuery = query(
               collection(db, 'services'),
               where('barberId', '==', barber.uid)
             );
-            const servicesSnapshot = await getDocs(servicesQuery);
+            const availabilityRef = doc(db, 'availability', barber.uid);
+
+            const [servicesSnapshot, availabilitySnap] = await Promise.all([
+              getDocs(servicesQuery),
+              getDoc(availabilityRef),
+            ]);
+
             const services = servicesSnapshot.docs.map(
               (doc) => ({ id: doc.id, ...doc.data() } as ServiceCategory)
             );
-
-            // Fetch Availability
-            const availabilityRef = doc(db, 'availability', barber.uid);
-            const availabilitySnap = await getDoc(availabilityRef);
             const availability = availabilitySnap.exists()
               ? (availabilitySnap.data() as Availability)
               : undefined;
@@ -128,105 +121,7 @@ function ClientView() {
     };
 
     fetchBarbersData();
-
-    // 3. Fetch all relevant bookings
-    const bookingsQuery = query(
-      collection(db, 'bookings'),
-      where('date', '>=', todayDateString)
-    );
-    const unsubscribeBookings = onSnapshot(bookingsQuery, (querySnapshot) => {
-      const bookedSlots = querySnapshot.docs.map(
-        (doc) => doc.data() as Booking
-      );
-      setBookings(bookedSlots);
-    });
-
-    return () => {
-      unsubscribeBookings();
-    };
-  }, [db, todayDateString, toast]);
-
-  const getAvailableSlotsForBarber = (barber: BarberProfile): TimeSlot[] => {
-    if (
-      !barber.availability ||
-      !barber.availability.schedule[todayDayName]?.isEnabled
-    ) {
-      return [];
-    }
-    const { schedule, slotDuration } = barber.availability;
-    const { startTime, endTime } = schedule[todayDayName];
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-
-    return generateTimeSlots(
-      startHour,
-      startMinute,
-      endHour,
-      endMinute,
-      slotDuration
-    );
-  };
-
-  const bookAppointment = async (
-    barberId: string,
-    slot: TimeSlot,
-    date: Date
-  ) => {
-    if (!user || !db) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Required',
-        description: 'You need to be logged in to book an appointment.',
-      });
-      return;
-    }
-
-    const bookingDate = date.toISOString().split('T')[0];
-    const isAlreadyBooked = bookings.some(
-      (b) =>
-        b.barberId === barberId && b.date === bookingDate && b.time === slot.time
-    );
-
-    if (isAlreadyBooked) {
-      toast({
-        variant: 'destructive',
-        title: 'Uh oh! Something went wrong.',
-        description: 'This time slot is already reserved.',
-      });
-      return;
-    }
-
-    try {
-      const bookingId = `${barberId}_${bookingDate}_${slot.time.replace(
-        ':',
-        ''
-      )}`;
-      const bookingRef = doc(db, 'bookings', bookingId);
-
-      const newBooking: Booking = {
-        id: bookingId,
-        barberId,
-        clientId: user.uid,
-        clientName: user.displayName || userProfile?.name || 'Anonymous',
-        date: bookingDate,
-        time: slot.time,
-      };
-
-      await setDoc(bookingRef, newBooking);
-
-      toast({
-        title: 'Booking Confirmed!',
-        description: `Your appointment is booked.`,
-      });
-    } catch (error) {
-      console.error('Error booking appointment: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Uh oh! Something went wrong.',
-        description: 'There was a problem with your request.',
-      });
-    }
-  };
+  }, [db, toast]);
 
   const filteredBarbers = barbers.filter((barber) =>
     barber.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -234,12 +129,11 @@ function ClientView() {
 
   if (isLoading) {
     return (
-       <div className="flex h-[50vh] items-center justify-center">
+      <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    )
+    );
   }
-
 
   return (
     <>
@@ -254,104 +148,37 @@ function ClientView() {
       </div>
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
         {filteredBarbers.map((barber) => {
-          const availableSlots = getAvailableSlotsForBarber(barber);
           return (
-            <Card key={barber.uid}>
-              <CardHeader className="flex flex-row items-start gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={''} alt={barber.name} />
-                  <AvatarFallback>{barber.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <CardTitle>{barber.name}</CardTitle>
-                  {barber.mobileNumber && (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      <span>{barber.mobileNumber}</span>
-                    </div>
-                  )}
-                  {barber.address && (
-                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{barber.address}</span>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="services">
-                    <AccordionTrigger>View Services</AccordionTrigger>
-                    <AccordionContent>
-                      {barber.services.length > 0 ? (
-                        <ul className="space-y-2 text-sm">
-                          {barber.services.map((service) => (
-                            <li
-                              key={service.id}
-                              className="flex justify-between"
-                            >
-                              <span className="font-medium">
-                                {service.name}
-                              </span>
-                              <div className="flex items-center gap-4 text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4" />
-                                  {service.duration}m
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Tag className="h-4 w-4" />
-                                  {service.price} PKR
-                                </span>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          No services listed for this barber yet.
-                        </p>
-                      )}
-                    </AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="slots">
-                    <AccordionTrigger>
-                      Available Slots for Today
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="grid grid-cols-3 gap-2 pt-2">
-                        {availableSlots.length > 0 ? (
-                          availableSlots.map((slot) => {
-                            const isBooked = bookings.some(
-                              (b) =>
-                                b.barberId === barber.uid &&
-                                b.time === slot.time &&
-                                b.date === todayDateString
-                            );
-
-                            return (
-                              <Button
-                                key={slot.time}
-                                variant={isBooked ? 'destructive' : 'outline'}
-                                disabled={isBooked}
-                                onClick={() =>
-                                  bookAppointment(barber.uid, slot, today)
-                                }
-                              >
-                                {slot.time}
-                              </Button>
-                            );
-                          })
-                        ) : (
-                          <p className="col-span-3 text-sm text-muted-foreground">
-                            No available slots for today.
-                          </p>
-                        )}
+            <Link href={`/book/${barber.uid}`} key={barber.uid} passHref>
+              <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1">
+                <CardHeader className="flex flex-row items-start gap-4">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={''} alt={barber.name} />
+                    <AvatarFallback>{barber.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <CardTitle>{barber.name}</CardTitle>
+                    {barber.mobileNumber && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                        <span>{barber.mobileNumber}</span>
                       </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </CardContent>
-            </Card>
+                    )}
+                    {barber.address && (
+                      <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span>{barber.address}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                   <Button variant="outline" className="w-full">
+                    Book Appointment
+                  </Button>
+                </CardContent>
+              </Card>
+            </Link>
           );
         })}
       </div>
@@ -472,5 +299,3 @@ function HomePage() {
 export default function Home() {
   return <HomePage />;
 }
-
-    

@@ -1,4 +1,3 @@
-
 export interface TimeSlot {
   time: string;
   isReserved: boolean;
@@ -14,9 +13,12 @@ export interface Booking {
   barberId: string;
   clientId: string;
   clientName: string | null;
-  date: string;
-  time: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  serviceIds: string[];
+  status: 'confirmed' | 'cancelled';
 }
+
 
 export interface UserProfile {
   uid: string;

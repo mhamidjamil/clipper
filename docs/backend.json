@@ -106,6 +106,22 @@
         }
       },
       "required": ["id", "barberId", "name", "duration", "price"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Represents a client's booking with a barber.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "barberId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "format": "time" },
+        "serviceIds": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["confirmed", "cancelled"] }
+      },
+      "required": ["id", "barberId", "clientId", "date", "time", "serviceIds", "status"]
     }
   },
   "auth": {
@@ -129,6 +145,12 @@
         "$ref": "#/entities/ServiceCategory"
       },
       "description": "Stores the services offered by barbers."
+    },
+    "/bookings/{bookingId}": {
+        "schema": {
+            "$ref": "#/entities/Booking"
+        },
+        "description": "Stores booking information for appointments."
     }
   }
 }
