@@ -1,3 +1,4 @@
+
 'use client';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -17,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { UserProfile } from '@/lib/types';
+import type { UserProfile } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +30,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const formSchema = z
   .object({
@@ -36,18 +39,31 @@ const formSchema = z
     email: z.string().email('Invalid email address'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
     role: z.enum(['client', 'barber']),
-    mobileNumber: z.string(),
+    mobileNumber: z.string().optional(),
+    address: z.string().optional(),
   })
   .refine(
     (data) => {
       if (data.role === 'barber') {
-        return data.mobileNumber.length > 0;
+        return data.mobileNumber && data.mobileNumber.length > 0;
       }
       return true;
     },
     {
       message: 'Mobile number is required for barbers',
       path: ['mobileNumber'],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.role === 'barber') {
+        return data.address && data.address.length > 0;
+      }
+      return true;
+    },
+    {
+      message: 'Address is required for barbers',
+      path: ['address'],
     }
   );
 
@@ -56,7 +72,8 @@ type SignupFormValues = z.infer<typeof formSchema>;
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { auth, db } = useFirebase();
+  const firebaseContext = useFirebase();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(formSchema),
@@ -66,12 +83,23 @@ export default function SignupPage() {
       password: '',
       role: 'client',
       mobileNumber: '',
+      address: '',
     },
   });
 
   const role = form.watch('role');
 
   const handleSignup = async (values: SignupFormValues) => {
+    if (!firebaseContext) {
+      toast({
+        variant: 'destructive',
+        title: 'Signup Failed',
+        description: 'Firebase is not initialized.',
+      });
+      return;
+    }
+    const { auth, db } = firebaseContext;
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -89,6 +117,10 @@ export default function SignupPage() {
 
       if (values.mobileNumber) {
         userProfile.mobileNumber = values.mobileNumber;
+      }
+      
+      if (values.role === 'barber' && values.address) {
+        userProfile.address = values.address;
       }
 
       await setDoc(doc(db, 'users', user.uid), userProfile);
@@ -148,22 +180,23 @@ export default function SignupPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="mobileNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Mobile Number {role === 'barber' && '(Required)'}
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="123-456-7890" {...field} />
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -203,6 +236,41 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="mobileNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Mobile Number {role === 'barber' && '(Required)'}
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="123-456-7890" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {role === 'barber' && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address (Required)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="123 Main St, Anytown USA"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
             </CardContent>
             <CardFooter className="flex flex-col">
               <Button className="w-full" type="submit">

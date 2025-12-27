@@ -27,9 +27,85 @@
         "mobileNumber": {
             "type": "string",
             "description": "The user's mobile phone number."
+        },
+        "address": {
+            "type": "string",
+            "description": "The barber's address."
         }
       },
       "required": ["uid", "email", "role"]
+    },
+    "DaySchedule": {
+      "title": "Day Schedule",
+      "description": "Defines the working hours for a specific day.",
+      "type": "object",
+      "properties": {
+        "isEnabled": {
+          "type": "boolean"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "time"
+        }
+      }
+    },
+    "Availability": {
+      "title": "Barber Availability",
+      "description": "Stores a barber's weekly availability schedule.",
+      "type": "object",
+      "properties": {
+        "barberId": {
+          "type": "string",
+          "description": "The UID of the barber."
+        },
+        "slotDuration": {
+          "type": "number",
+          "description": "Duration of each appointment slot in minutes."
+        },
+        "schedule": {
+          "type": "object",
+          "description": "Weekly schedule, with keys as lowercase day names (e.g., 'sunday').",
+          "patternProperties": {
+            "^(sunday|monday|tuesday|wednesday|thursday|friday|saturday)$": {
+              "$ref": "#/entities/DaySchedule"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["barberId", "slotDuration", "schedule"]
+    },
+    "ServiceCategory": {
+      "title": "Service Category",
+      "description": "Represents a service offered by a barber.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique ID for the service category."
+        },
+        "barberId": {
+          "type": "string",
+          "description": "The UID of the barber offering the service."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the service (e.g., Haircut, Shave)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "The time required for the service in minutes."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the service in PKR."
+        }
+      },
+      "required": ["id", "barberId", "name", "duration", "price"]
     }
   },
   "auth": {
@@ -41,6 +117,18 @@
         "$ref": "#/entities/UserProfile"
       },
       "description": "Stores user profile information."
+    },
+    "/availability/{barberId}": {
+      "schema": {
+        "$ref": "#/entities/Availability"
+      },
+      "description": "Stores the weekly availability for each barber."
+    },
+    "/services/{serviceId}": {
+      "schema": {
+        "$ref": "#/entities/ServiceCategory"
+      },
+      "description": "Stores the services offered by barbers."
     }
   }
 }

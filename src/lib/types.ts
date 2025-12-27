@@ -24,4 +24,27 @@ export interface UserProfile {
   role: 'client' | 'barber';
   name?: string;
   mobileNumber?: string;
+  address?: string;
+}
+
+export interface DaySchedule {
+  isEnabled: boolean;
+  startTime: string;
+  endTime: string;
+}
+
+export interface Availability {
+  barberId: string;
+  slotDuration: number; // in minutes
+  schedule: {
+    [day: string]: DaySchedule;
+  };
+}
+
+export interface ServiceCategory {
+  id: string;
+  barberId: string;
+  name: string;
+  duration: number; // in minutes
+  price: number; // in PKR
 }

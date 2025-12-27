@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,24 +10,39 @@ import {
   collection,
   query,
   where,
+  getDocs,
+  getDoc,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 import { useToast } from '@/hooks/use-toast';
-import { TimeSlot, BarberSchedule, Booking, UserProfile } from '@/lib/types';
-import { generateTimeSlots } from '@/lib/data';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { CalendarDays, Search, Moon, Sun, LogOut } from 'lucide-react';
+  TimeSlot,
+  BarberSchedule,
+  Booking,
+  UserProfile,
+  Availability,
+  ServiceCategory,
+} from '@/lib/types';
+import { generateTimeSlots } from '@/lib/data';
+import { Search, Phone, MapPin, Clock, Tag, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -36,102 +52,89 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useTheme } from 'next-themes';
 import { useUser } from '@/firebase';
-import { signOut } from 'firebase/auth';
+import { Header } from '@/components/Header';
 
-function Header() {
-  const { theme, setTheme } = useTheme();
-  const { user, userProfile, auth } = useUser();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    if (!auth) return;
-    await signOut(auth);
-    router.push('/login');
-  };
-
-  return (
-    <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-      <div className="container mx-auto flex h-14 items-center justify-between px-4 md:px-6">
-        <h1 className="text-xl font-bold tracking-tight">Clipper Scheduler</h1>
-        <div className="flex items-center gap-4">
-          {userProfile?.role === 'barber' && (
-            <Link href="/availability" passHref>
-              <Button variant="outline" size="icon">
-                <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
-                <span className="sr-only">Manage Availability</span>
-              </Button>
-            </Link>
-          )}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          >
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src={user.photoURL ?? ''}
-                      alt={user.displayName ?? 'User'}
-                    />
-                    <AvatarFallback>
-                      {userProfile?.name?.charAt(0) ?? user.email?.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
+type BarberProfile = UserProfile & {
+  services: ServiceCategory[];
+};
 
 function ClientView() {
   const { toast } = useToast();
-  const [barbers, setBarbers] = useState<UserProfile[]>([]);
+  const [barbers, setBarbers] = useState<BarberProfile[]>([]);
   const [schedules, setSchedules] = useState<BarberSchedule[]>([]);
-  const { user, db } = useUser();
+  const { user, db, userProfile } = useUser();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const today = new Date();
+  const todayDayName = today
+    .toLocaleDateString('en-US', { weekday: 'long' })
+    .toLowerCase();
   const todayDateString = today.toISOString().split('T')[0];
 
   useEffect(() => {
     if (!db) return;
 
-    // Fetch barbers
-    const barbersQuery = query(
-      collection(db, 'users'),
-      where('role', '==', 'barber')
-    );
-    const unsubscribeBarbers = onSnapshot(barbersQuery, (snapshot) => {
-      const barbersData = snapshot.docs.map(
+    const fetchBarbersAndSchedules = async () => {
+      const barbersQuery = query(
+        collection(db, 'users'),
+        where('role', '==', 'barber')
+      );
+      const barbersSnapshot = await getDocs(barbersQuery);
+      const barbersData = barbersSnapshot.docs.map(
         (doc) => doc.data() as UserProfile
       );
-      setBarbers(barbersData);
 
-      const barberSchedules: BarberSchedule[] = barbersData.map((barber) => ({
-        barberId: barber.uid,
-        availableSlots: generateTimeSlots(9, 17, 30),
-      }));
+      const enhancedBarbers: BarberProfile[] = [];
+      const barberSchedules: BarberSchedule[] = [];
+
+      for (const barber of barbersData) {
+        // Fetch Services
+        const servicesQuery = query(
+          collection(db, 'services'),
+          where('barberId', '==', barber.uid)
+        );
+        const servicesSnapshot = await getDocs(servicesQuery);
+        const services = servicesSnapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as ServiceCategory)
+        );
+
+        enhancedBarbers.push({ ...barber, services });
+
+        // Fetch Availability
+        const availabilityRef = doc(db, 'availability', barber.uid);
+        const availabilitySnap = await getDoc(availabilityRef);
+
+        let availableSlots: TimeSlot[] = [];
+        if (availabilitySnap.exists()) {
+          const availability = availabilitySnap.data() as Availability;
+          const daySchedule = availability.schedule[todayDayName];
+          if (daySchedule && daySchedule.isEnabled) {
+            const [startHour, startMinute] = daySchedule.startTime
+              .split(':')
+              .map(Number);
+            const [endHour, endMinute] = daySchedule.endTime
+              .split(':')
+              .map(Number);
+            availableSlots = generateTimeSlots(
+              startHour,
+              startMinute,
+              endHour,
+              endMinute,
+              availability.slotDuration
+            );
+          }
+        }
+        barberSchedules.push({
+          barberId: barber.uid,
+          availableSlots,
+        });
+      }
+      setBarbers(enhancedBarbers);
       setSchedules(barberSchedules);
-    });
+    };
+
+    fetchBarbersAndSchedules();
 
     // Fetch bookings
     const bookingsQuery = query(
@@ -146,10 +149,9 @@ function ClientView() {
     });
 
     return () => {
-      unsubscribeBarbers();
       unsubscribeBookings();
     };
-  }, [db, todayDateString]);
+  }, [db, todayDateString, todayDayName]);
 
   const bookAppointment = async (
     barberId: string,
@@ -235,40 +237,92 @@ function ClientView() {
 
           return (
             <Card key={barber.uid}>
-              <CardHeader className="flex flex-row items-center gap-4">
+              <CardHeader className="flex flex-row items-start gap-4">
                 <Avatar className="h-16 w-16">
                   <AvatarImage src={''} alt={barber.name} />
                   <AvatarFallback>{barber.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="flex-1">
                   <CardTitle>{barber.name}</CardTitle>
+                  {barber.mobileNumber && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                      <Phone className="h-4 w-4" />
+                      <span>{barber.mobileNumber}</span>
+                    </div>
+                  )}
+                  {barber.address && (
+                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span>{barber.address}</span>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-                <h3 className="mb-4 text-lg font-semibold">
-                  Available Slots for Today
-                </h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {barberSchedule?.availableSlots.map((slot) => {
-                    const isBooked = bookings.some(
-                      (b) =>
-                        b.barberId === barber.uid &&
-                        b.time === slot.time &&
-                        b.date === todayDateString
-                    );
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="services">
+                    <AccordionTrigger>View Services</AccordionTrigger>
+                    <AccordionContent>
+                      {barber.services.length > 0 ? (
+                        <ul className="space-y-2 text-sm">
+                          {barber.services.map((service) => (
+                            <li key={service.id} className="flex justify-between">
+                              <span className="font-medium">{service.name}</span>
+                              <div className="flex items-center gap-4 text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  {service.duration}m
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Tag className="h-4 w-4" />
+                                  {service.price} PKR
+                                </span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                         <p className="text-sm text-muted-foreground">
+                          No services listed for this barber yet.
+                        </p>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="slots">
+                     <AccordionTrigger>Available Slots for Today</AccordionTrigger>
+                     <AccordionContent>
+                        <div className="grid grid-cols-3 gap-2 pt-2">
+                          {barberSchedule && barberSchedule.availableSlots.length > 0 ? (
+                            barberSchedule.availableSlots.map((slot) => {
+                              const isBooked = bookings.some(
+                                (b) =>
+                                  b.barberId === barber.uid &&
+                                  b.time === slot.time &&
+                                  b.date === todayDateString
+                              );
 
-                    return (
-                      <Button
-                        key={slot.time}
-                        variant={isBooked ? 'destructive' : 'outline'}
-                        disabled={isBooked}
-                        onClick={() => bookAppointment(barber.uid, slot, today)}
-                      >
-                        {slot.time}
-                      </Button>
-                    );
-                  })}
-                </div>
+                              return (
+                                <Button
+                                  key={slot.time}
+                                  variant={isBooked ? 'destructive' : 'outline'}
+                                  disabled={isBooked}
+                                  onClick={() =>
+                                    bookAppointment(barber.uid, slot, today)
+                                  }
+                                >
+                                  {slot.time}
+                                </Button>
+                              );
+                            })
+                          ) : (
+                            <p className="col-span-3 text-muted-foreground">
+                              No available slots for today.
+                            </p>
+                          )}
+                        </div>
+                     </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </CardContent>
             </Card>
           );
@@ -364,7 +418,7 @@ function HomePage() {
   if (loading || !userProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
-        Loading...
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
