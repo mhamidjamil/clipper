@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, LogOut, Moon, Sun, List } from 'lucide-react';
+import { CalendarDays, LogOut, Moon, Sun, List, BookOpen } from 'lucide-react';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -47,6 +47,22 @@ export function Header() {
                 <Button variant="outline" size="icon">
                   <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
                   <span className="sr-only">Manage Availability</span>
+                </Button>
+              </Link>
+            </>
+          )}
+          {userProfile?.role === 'client' && (
+            <>
+              <Link href="/appointments" passHref>
+                <Button variant="outline" size="sm" className="hidden sm:flex">
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  My Appointments
+                </Button>
+              </Link>
+              <Link href="/appointments" passHref>
+                <Button variant="outline" size="icon" className="sm:hidden">
+                  <BookOpen className="h-[1.2rem] w-[1.2rem]" />
+                  <span className="sr-only">My Appointments</span>
                 </Button>
               </Link>
             </>
