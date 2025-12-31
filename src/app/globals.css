@@ -31,25 +31,25 @@ body {
     --radius: 0.5rem;
   }
   .dark {
-    --background: 220 40% 5%; /* Near black */
-    --foreground: 210 40% 98%; /* Light gray */
-    --card: 220 40% 9%; /* Dark navy blue */
+    --background: 222 84% 4.9%; /* Rich dark navy-black */
+    --foreground: 210 40% 98%;
+    --card: 222 70% 10%; /* Dark navy blue */
     --card-foreground: 210 40% 98%;
-    --popover: 220 40% 9%;
+    --popover: 222 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 220 60% 55%; /* Brighter navy blue for buttons */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 220 40% 15%; /* Lighter navy blue */
+    --primary: 217 91% 60%; /* Bright blue */
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217 33% 17%; /* Lighter navy */
     --secondary-foreground: 210 40% 98%;
-    --muted: 220 40% 15%;
-    --muted-foreground: 210 40% 70%;
-    --accent: 220 60% 55%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 40% 18%; /* Navy blue border */
-    --input: 220 40% 18%;
-    --ring: 220 60% 55%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 91% 60%;
   }
 }
 
@@ -61,7 +61,7 @@ body {
     @apply bg-background text-foreground;
   }
   .dark body {
-    background-image: linear-gradient(to bottom, hsl(var(--background)), hsl(220, 30%, 8%));
+    background-image: linear-gradient(to bottom, hsl(222, 84%, 4.9%), hsl(222, 70%, 10%));
     background-repeat: no-repeat;
   }
   h1, h2, h3, h4, h5, h6 {
