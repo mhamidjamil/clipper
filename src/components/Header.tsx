@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, LogOut, Moon, Sun, List, BookOpen } from 'lucide-react';
+import { CalendarDays, LogOut, Moon, Sun, List, BookOpen, MessageSquare } from 'lucide-react';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -35,6 +35,14 @@ export function Header() {
           Clipper Scheduler
         </Link>
         <div className="flex items-center gap-4">
+          {user && (
+              <Link href="/chats" passHref>
+                  <Button variant="outline" size="icon">
+                      <MessageSquare className="h-[1.2rem] w-[1.2rem]" />
+                      <span className="sr-only">Chats</span>
+                  </Button>
+              </Link>
+          )}
           {userProfile?.role === 'barber' && (
             <>
               <Link href="/categories" passHref>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,6 +20,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -33,7 +35,7 @@ import {
   ServiceCategory,
 } from '@/lib/types';
 import { generateTimeSlots } from '@/lib/data';
-import { Search, Phone, MapPin, Loader2 } from 'lucide-react';
+import { Search, Phone, MapPin, Loader2, MessageSquare } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -58,6 +60,7 @@ function ClientView() {
   const { user, db, userProfile } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     if (!db) return;
@@ -117,6 +120,33 @@ function ClientView() {
 
     fetchBarbersData();
   }, [db, toast]);
+
+  const handleStartChat = async (barberId: string) => {
+    if (!user || !db) return;
+    
+    // Create a unique chat ID for the pair of users
+    const chatId = [user.uid, barberId].sort().join('_');
+    const chatRef = doc(db, 'chats', chatId);
+
+    try {
+        const chatSnap = await getDoc(chatRef);
+        if (!chatSnap.exists()) {
+            await setDoc(chatRef, {
+                id: chatId,
+                participants: [user.uid, barberId],
+            });
+        }
+        router.push(`/chat/${chatId}`);
+    } catch (error) {
+        console.error("Error starting chat:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not start chat. Please try again."
+        });
+    }
+  };
+
 
   const filteredBarbers = barbers.filter((barber) =>
     barber.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -187,13 +217,20 @@ function ClientView() {
                   )}
                 </CardContent>
               </div>
-              <CardContent>
-                <Link href={`/book/${barber.uid}`} passHref>
+              <CardFooter className="flex flex-col gap-2 sm:flex-row">
+                 <Link href={`/book/${barber.uid}`} passHref className="w-full">
                   <Button variant="outline" className="w-full">
                     Book Appointment
                   </Button>
                 </Link>
-              </CardContent>
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => handleStartChat(barber.uid)}
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" /> Chat
+                </Button>
+              </CardFooter>
             </Card>
           );
         })}

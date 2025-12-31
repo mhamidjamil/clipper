@@ -1,3 +1,6 @@
+
+import { Timestamp } from "firebase/firestore";
+
 export interface TimeSlot {
   time: string;
   isReserved: boolean;
@@ -49,4 +52,22 @@ export interface ServiceCategory {
   name: string;
   duration: number; // in minutes
   price: number; // in PKR
+}
+
+export interface Message {
+    id: string;
+    chatId: string;
+    senderId: string;
+    text: string;
+    timestamp: Timestamp;
+}
+
+export interface Chat {
+    id: string;
+    participants: string[];
+    participantDetails: UserProfile[];
+    lastMessage?: {
+        text: string;
+        timestamp: Timestamp;
+    };
 }

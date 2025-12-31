@@ -122,6 +122,37 @@
         "status": { "type": "string", "enum": ["confirmed", "cancelled"] }
       },
       "required": ["id", "barberId", "clientId", "date", "time", "serviceIds", "status"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Represents a chat conversation between two users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": {
+            "type": "object",
+            "properties": {
+                "text": { "type": "string" },
+                "timestamp": { "type": "object" }
+            }
+        }
+      },
+      "required": ["id", "participants"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Represents a single message within a chat.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "object" }
+      },
+      "required": ["id", "chatId", "senderId", "text", "timestamp"]
     }
   },
   "auth": {
@@ -151,6 +182,18 @@
             "$ref": "#/entities/Booking"
         },
         "description": "Stores booking information for appointments."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+        "schema": {
+            "$ref": "#/entities/Message"
+        },
+        "description": "Stores messages for a specific chat."
+    },
+    "/chats/{chatId}": {
+        "schema": {
+            "$ref": "#/entities/Chat"
+        },
+        "description": "Stores chat sessions between users."
     }
   }
 }
