@@ -220,7 +220,7 @@ export default function BookingPage() {
         toast({
             variant: 'destructive',
             title: 'Booking Failed',
-            description: error.message || 'An unexpected error occurred.',
+            description: 'An unexpected error occurred. Please try again.',
         });
     } finally {
         setIsSubmitting(false);
@@ -342,7 +342,7 @@ export default function BookingPage() {
                           head_cell: "text-muted-foreground rounded-md w-9 h-9 font-normal text-[0.8rem] flex items-center justify-center",
                           row: "grid grid-cols-7 w-full mt-1",
                           cell: "h-9 w-9 text-center text-sm p-0 relative flex items-center justify-center [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                          day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-md transition-colors",
+                          day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
                           day_range_end: "day-range-end",
                           day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                           day_today: "bg-accent text-accent-foreground",
@@ -375,7 +375,8 @@ export default function BookingPage() {
                             const isBooked = bookings.some(
                               (b) =>
                                 b.date === format(selectedDate, 'yyyy-MM-dd') &&
-                                b.time === slot.time
+                                b.time === slot.time &&
+                                b.status === 'confirmed'
                             );
                             return (
                               <Button
