@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -58,7 +59,7 @@ export default function BookingPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    startOfDay(new Date())
+    undefined
   );
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -213,7 +214,7 @@ export default function BookingPage() {
             title: 'Booking Confirmed!',
             description: `Your appointment with ${barber?.name} on ${format(selectedDate, 'PPP')} at ${selectedTime} is confirmed.`,
         });
-        router.push('/');
+        router.push('/appointments');
 
     } catch (error: any) {
         console.error('Error creating booking:', error);
@@ -257,19 +258,21 @@ export default function BookingPage() {
   };
 
   const isDayDisabled = (date: Date) => {
-    // Disable past dates
-    if (date < startOfDay(new Date())) return true;
-    
-    // Disable dates beyond 30 days from now
+    // Disable dates more than 30 days from now
     if (date > addDays(new Date(), 30)) return true;
     
     // Disable if barber is not available on this day
-    if (!availability?.schedule) return true;
+    if (availability?.schedule) {
+        const dayName = format(date, 'EEEE').toLowerCase();
+        const daySchedule = availability.schedule[dayName];
+        if (!daySchedule || !daySchedule.isEnabled) {
+            return true;
+        }
+    } else { // If no availability is set up, disable all dates
+        return true;
+    }
     
-    const dayName = format(date, 'EEEE').toLowerCase();
-    const daySchedule = availability.schedule[dayName];
-    
-    return !daySchedule || !daySchedule.isEnabled;
+    return false;
   };
 
   return (
@@ -316,44 +319,19 @@ export default function BookingPage() {
               <div className="grid gap-8 xl:grid-cols-2">
                 {/* Calendar */}
                 <div className="flex justify-center xl:justify-start">
-                  <div className="w-full max-w-sm">
-                    <div className="bg-card rounded-lg border shadow-sm p-4">
-                      <Calendar
+                    <Calendar
                         mode="single"
                         selected={selectedDate}
                         onSelect={(date) => {
-                          setSelectedDate(date);
-                          setSelectedTime(null); // Reset time when date changes
+                            if (date) {
+                                setSelectedDate(startOfDay(date));
+                                setSelectedTime(null); // Reset time when date changes
+                            }
                         }}
                         disabled={isDayDisabled}
+                        fromMonth={new Date()}
                         initialFocus
-                        className="w-full"
-                        classNames={{
-                          months: "flex flex-col space-y-4",
-                          month: "space-y-4 w-full",
-                          caption: "flex justify-center pt-1 relative items-center",
-                          caption_label: "text-sm font-medium",
-                          nav: "space-x-1 flex items-center",
-                          nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                          nav_button_previous: "absolute left-1",
-                          nav_button_next: "absolute right-1",
-                          table: "w-full border-collapse space-y-1",
-                          head_row: "grid grid-cols-7 w-full",
-                          head_cell: "text-muted-foreground rounded-md w-9 h-9 font-normal text-[0.8rem] flex items-center justify-center",
-                          row: "grid grid-cols-7 w-full mt-1",
-                          cell: "h-9 w-9 text-center text-sm p-0 relative flex items-center justify-center [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                          day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                          day_range_end: "day-range-end",
-                          day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                          day_today: "bg-accent text-accent-foreground",
-                          day_outside: "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
-                          day_disabled: "text-muted-foreground opacity-50 cursor-not-allowed",
-                          day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                          day_hidden: "invisible",
-                        }}
-                      />
-                    </div>
-                  </div>
+                    />
                 </div>
                 
                 {/* Time Slots */}
@@ -406,7 +384,7 @@ export default function BookingPage() {
                           <Clock className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
                           <p className="text-lg font-medium mb-2">No slots available</p>
                           <p className="text-sm text-muted-foreground">
-                            Try selecting a different date
+                            This barber has no available slots for this day or the day is fully booked. Try another date.
                           </p>
                         </div>
                       )
