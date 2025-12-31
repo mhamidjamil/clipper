@@ -31,25 +31,25 @@ body {
     --radius: 0.5rem;
   }
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 231 48% 48%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 259 47% 78%;
-    --accent-foreground: 0 0% 98%;
+    --background: 220 40% 5%; /* Near black */
+    --foreground: 210 40% 98%; /* Light gray */
+    --card: 220 40% 9%; /* Dark navy blue */
+    --card-foreground: 210 40% 98%;
+    --popover: 220 40% 9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 220 60% 55%; /* Brighter navy blue for buttons */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 220 40% 15%; /* Lighter navy blue */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 40% 15%;
+    --muted-foreground: 210 40% 70%;
+    --accent: 220 60% 55%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 231 48% 48%;
+    --border: 220 40% 18%; /* Navy blue border */
+    --input: 220 40% 18%;
+    --ring: 220 60% 55%;
   }
 }
 
@@ -60,9 +60,11 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  .dark body {
+    background-image: linear-gradient(to bottom, hsl(var(--background)), hsl(220, 30%, 8%));
+    background-repeat: no-repeat;
+  }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', sans-serif;
   }
 }
-
-    
