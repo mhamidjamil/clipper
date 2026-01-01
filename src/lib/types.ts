@@ -58,8 +58,10 @@ export interface Message {
     id: string;
     chatId: string;
     senderId: string;
+    receiverId: string;
     text: string;
     timestamp: Timestamp;
+    isRead: boolean;
 }
 
 export interface Chat {
@@ -70,4 +72,5 @@ export interface Chat {
         text: string;
         timestamp: Timestamp;
     };
+    unreadCount?: number;
 }

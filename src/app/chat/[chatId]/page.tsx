@@ -14,6 +14,9 @@ import {
   getDoc,
   updateDoc,
   Timestamp,
+  where,
+  getDocs,
+  writeBatch,
 } from 'firebase/firestore';
 import { useUser } from '@/firebase';
 import { Header } from '@/components/Header';
@@ -28,7 +31,7 @@ import { format } from 'date-fns';
 
 export default function ChatPage() {
   const { chatId } = useParams();
-  const { user, db, userProfile, loading: userLoading } = useUser();
+  const { user, db, loading: userLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -37,6 +40,32 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Mark messages as read
+  useEffect(() => {
+    if (!db || !user || !chatId) return;
+
+    const markMessagesAsRead = async () => {
+      const messagesQuery = query(
+        collection(db, 'chats', chatId as string, 'messages'),
+        where('receiverId', '==', user.uid),
+        where('isRead', '==', false)
+      );
+
+      const querySnapshot = await getDocs(messagesQuery);
+      const batch = writeBatch(db);
+      querySnapshot.forEach((doc) => {
+        batch.update(doc.ref, { isRead: true });
+      });
+
+      if (!querySnapshot.empty) {
+        await batch.commit();
+      }
+    };
+
+    markMessagesAsRead();
+  }, [db, user, chatId, messages]); // Rerun when messages change as well
+
 
   useEffect(() => {
     if (!db || !user || !chatId) return;
@@ -98,6 +127,7 @@ export default function ChatPage() {
         receiverId: otherUser.uid,
         text: newMessage,
         timestamp: serverTimestamp(),
+        isRead: false,
       });
 
       // Update the last message on the chat document

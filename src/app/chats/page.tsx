@@ -9,7 +9,7 @@ import {
   onSnapshot,
   getDoc,
   doc,
-  orderBy,
+  getDocs,
 } from 'firebase/firestore';
 import { useUser } from '@/firebase';
 import { Header } from '@/components/Header';
@@ -25,6 +25,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 export default function ChatsPage() {
   const { user, db, userProfile, loading: userLoading } = useUser();
@@ -55,11 +56,21 @@ export default function ChatsPage() {
             otherParticipantProfile = userSnap.data() as UserProfile;
           }
         }
+        
+        // Get unread count for this chat
+        const unreadMessagesQuery = query(
+          collection(db, 'chats', chatDoc.id, 'messages'),
+          where('receiverId', '==', user.uid),
+          where('isRead', '==', false)
+        );
+        const unreadSnapshot = await getDocs(unreadMessagesQuery);
+
 
         return {
           id: chatDoc.id,
           ...chatData,
           participantDetails: otherParticipantProfile ? [otherParticipantProfile] : [],
+          unreadCount: unreadSnapshot.size,
         } as Chat;
       });
 
@@ -136,11 +147,16 @@ export default function ChatsPage() {
                         </p>
                       </div>
                     </div>
-                    {chat.lastMessage?.timestamp && (
-                        <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(chat.lastMessage.timestamp.toDate(), { addSuffix: true })}
-                        </p>
-                    )}
+                    <div className="flex flex-col items-end gap-2">
+                        {chat.lastMessage?.timestamp && (
+                            <p className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(chat.lastMessage.timestamp.toDate(), { addSuffix: true })}
+                            </p>
+                        )}
+                        {chat.unreadCount && chat.unreadCount > 0 && (
+                            <Badge variant="default" className="h-6 w-6 justify-center p-0">{chat.unreadCount}</Badge>
+                        )}
+                    </div>
                   </CardContent>
                 </Card>
               );

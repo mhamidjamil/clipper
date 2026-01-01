@@ -6,6 +6,12 @@ import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+} from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -16,17 +22,46 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CalendarDays, LogOut, Moon, Sun, List, BookOpen, MessageSquare } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Badge } from './ui/badge';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
-  const { user, userProfile, auth } = useUser();
+  const { user, userProfile, auth, db } = useUser();
   const router = useRouter();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = async () => {
     if (!auth) return;
     await signOut(auth);
     router.push('/login');
   };
+
+  useEffect(() => {
+    if (!db || !user) return;
+
+    // Listener for all unread messages for the current user
+    const unreadQuery = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(unreadQuery, async (chatSnapshot) => {
+        let totalUnread = 0;
+        for (const chatDoc of chatSnapshot.docs) {
+            const messagesQuery = query(
+                collection(db, 'chats', chatDoc.id, 'messages'),
+                where('receiverId', '==', user.uid),
+                where('isRead', '==', false)
+            );
+            const messagesSnapshot = await onSnapshot(messagesQuery, (snapshot) => {
+                 setUnreadCount(prev => prev + snapshot.size)
+            });
+        }
+    });
+
+    return () => unsubscribe();
+  }, [db, user]);
 
   return (
     <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
@@ -37,8 +72,11 @@ export function Header() {
         <div className="flex items-center gap-4">
           {user && (
               <Link href="/chats" passHref>
-                  <Button variant="outline" size="icon">
+                  <Button variant="outline" size="icon" className="relative">
                       <MessageSquare className="h-[1.2rem] w-[1.2rem]" />
+                      {unreadCount > 0 && (
+                          <Badge className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{unreadCount}</Badge>
+                      )}
                       <span className="sr-only">Chats</span>
                   </Button>
               </Link>

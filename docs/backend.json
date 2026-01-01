@@ -150,9 +150,10 @@
         "senderId": { "type": "string" },
         "receiverId": { "type": "string" },
         "text": { "type": "string" },
-        "timestamp": { "type": "object" }
+        "timestamp": { "type": "object" },
+        "isRead": { "type": "boolean" }
       },
-      "required": ["id", "chatId", "senderId", "text", "timestamp"]
+      "required": ["id", "chatId", "senderId", "text", "timestamp", "isRead"]
     }
   },
   "auth": {
