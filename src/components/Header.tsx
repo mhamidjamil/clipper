@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useTheme } from 'next-themes';
@@ -11,6 +10,7 @@ import {
   query,
   where,
   onSnapshot,
+  collectionGroup,
 } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
@@ -24,12 +24,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CalendarDays, LogOut, Moon, Sun, List, BookOpen, MessageSquare } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from './ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { usePathname } from 'next/navigation';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
   const { user, userProfile, auth, db } = useUser();
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
+  const { toast } = useToast();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -40,28 +44,44 @@ export function Header() {
   useEffect(() => {
     if (!db || !user) return;
 
-    // Listener for all unread messages for the current user
-    const unreadQuery = query(
-      collection(db, 'chats'),
-      where('participants', 'array-contains', user.uid)
+    // This query listens to all messages directed to the current user that are unread.
+    const q = query(
+      collectionGroup(db, 'messages'), 
+      where('receiverId', '==', user.uid),
+      where('isRead', '==', false)
     );
 
-    const unsubscribe = onSnapshot(unreadQuery, async (chatSnapshot) => {
-        let totalUnread = 0;
-        for (const chatDoc of chatSnapshot.docs) {
-            const messagesQuery = query(
-                collection(db, 'chats', chatDoc.id, 'messages'),
-                where('receiverId', '==', user.uid),
-                where('isRead', '==', false)
-            );
-            const messagesSnapshot = await onSnapshot(messagesQuery, (snapshot) => {
-                 setUnreadCount(prev => prev + snapshot.size)
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      // The size of the snapshot is the total number of unread messages.
+      const currentUnreadCount = snapshot.size;
+      
+      // If the new count is greater than the old count, it means a new message has arrived.
+      if (currentUnreadCount > unreadCount) {
+        // Find the newest message to show in the toast
+        const newMessages = snapshot.docChanges()
+          .filter(change => change.type === 'added')
+          .map(change => change.doc.data());
+
+        if (newMessages.length > 0) {
+          const lastMessage = newMessages[newMessages.length - 1];
+          const currentChatId = pathname.split('/chat/')[1];
+
+          // Only show toast if the user is NOT in the chat window of the sender
+          if (lastMessage.chatId !== currentChatId) {
+            toast({
+              title: 'New Message',
+              description: `You have a new message.`,
             });
+          }
         }
+      }
+      
+      setUnreadCount(currentUnreadCount);
     });
 
     return () => unsubscribe();
-  }, [db, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, user, pathname]);
 
   return (
     <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
